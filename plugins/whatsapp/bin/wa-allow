@@ -2,7 +2,8 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
-"""Manage the WhatsApp chat allowlist, shared by every machine through your self-chat.
+"""Manage the WhatsApp chat allowlist, shared by every machine through your notification chat
+(or your self-chat if you have none).
 
   wa-allow list [search]       chats this machine has seen; * allowlisted, ⏳ pending names
   wa-allow add <name|jid>      allowlist a chat (exact name, any case, or JID)
@@ -13,9 +14,9 @@
                                for Touch ID here
   wa-allow unnotify <name|jid> stop that (the chat stays allowlisted)
 
-add/remove/direct post "#wa <command>" to your "Message yourself" chat through the
-local bridge, so every linked machine applies it. The same commands can be typed
-in that chat on your phone. Adding a chat fetches its last 50 messages from your phone.
+add/remove/direct/notify post "#wa <command>" through the local bridge to your
+notification chat (else your "Message yourself" chat), so every linked machine
+applies it. The same commands can be typed in either chat on your phone. Adding a chat fetches its last 50 messages from your phone.
 """
 import json
 import os

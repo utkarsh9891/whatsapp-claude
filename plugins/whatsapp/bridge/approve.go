@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 )
 
@@ -183,8 +184,26 @@ func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID,
 	return true, nil
 }
 
-// allowSentChat adds a chat the owner approved a send to, on this machine only (no
-// self-chat command), and returns the allowlist before the change.
+// syncAddedChat tells the owner's other machines to add jid, by posting "#wa add <jid>" to
+// the first notification chat; with none it does nothing rather than write to the
+// self-chat (ADR 2026-10-27-fc6f0e). It reports whether it posted.
+func syncAddedChat(client *whatsmeow.Client, jid string) bool {
+	notify := currentConfig().NotifyChats
+	self, _ := ownJIDs(client)
+	post := commandChat(notify, self)
+	if post.Server != types.GroupServer {
+		return false
+	}
+	text := commandPrefix + " add " + jid
+	if _, err := client.SendMessage(context.Background(), post, &waE2E.Message{Conversation: &text}); err != nil {
+		fmt.Printf("Failed to sync an added chat to other machines: %v\n", err)
+		return false
+	}
+	return true
+}
+
+// allowSentChat adds a chat the owner approved a send to, on this machine, and returns
+// the allowlist before the change.
 func allowSentChat(jid string) (before []string, err error) {
 	_, err = mutateConfig(func(c *Config) string {
 		before = append([]string(nil), c.AllowChats...)
