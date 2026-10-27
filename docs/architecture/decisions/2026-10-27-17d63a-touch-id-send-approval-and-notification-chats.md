@@ -23,8 +23,10 @@ cannot answer that prompt for the owner.
 
 ## Decision
 1. **The bridge asks for owner authentication before every send to anyone but the owner**, whoever calls it: the
-   `wa` session, `wa -p`, the new `wa-send` CLI, or a raw API call. It runs `wa-approve`, a small Swift helper
-   installed next to the bridge, with the chat's name, its JID and the start of the text (or the file name). No
+   `wa` session, `wa -p`, the new `wa-send` CLI, or a raw API call. It runs a small Swift helper installed next to
+   the bridge as **WhatsApp for Claude** (source `approve/wa-approve.swift`), whose prompt reads as a sentence:
+   *WhatsApp for Claude is trying to send "…" to the group "Field Ops North".* It names the chat, says whether it
+   is a group, and shows the start of the text (or the file name); the JID only when no name is known. No
    approval within 120 s, a cancel, or a missing helper means no send. One prompt at a time.
 2. **The guard lets sends through when the helper is installed**, because the bridge now decides; without the
    helper (an older bridge), sends to others still ask as before. Sends to the owner's own chat need nothing.
@@ -69,6 +71,9 @@ cannot answer that prompt for the owner.
 - **Session keys encrypted with a Keychain key bound to the bridge's code identity:** deferred; it would close all
   three routes but is days of work (whatsmeow's store has no encryption) for a risk the owner accepts while
   bypass sessions reach other channels anyway. Revisit if sending from bypass sessions becomes routine.
+- **Show the JID next to the name** (as the guard's prompt in a8ea3b does): rejected after the owner found the
+  first prompt unreadable; "the group" vs a person's name keeps a group from passing as a person, and the JID
+  appears whenever the name is unknown.
 - **Keep the guard's `ask` as well:** rejected; two approvals per send, and it still blocks every non-interactive caller.
 
 ## What changed since 2026-10-24-f10233
