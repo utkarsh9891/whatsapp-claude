@@ -18,7 +18,7 @@ Open WhatsApp's **Message yourself** chat and send:
 | `#wa add 1203630000@g.us` | the same, by JID (use when two chats share a name) |
 | `#wa add me` | your own "Message yourself" chat (also `myself`, `self`); it has no name to match |
 | `#wa remove Field Ops North` | stop capturing and sending |
-| `#wa direct on` / `#wa direct off` | allow, or stop allowing, every 1:1 chat |
+| `#wa direct on` / `#wa direct off` | allow, or stop allowing, every 1:1 chat (by phone number or LID) |
 | `#wa notify Claude pings` | make a group a **notification chat**: Claude's messages to it send without Touch ID ([below](#notification-chats)) |
 | `#wa unnotify Claude pings` | stop that; the chat stays allowlisted |
 

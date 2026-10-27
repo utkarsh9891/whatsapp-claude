@@ -7,6 +7,8 @@ Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json
 - **Send to any chat:** a send you approve with Touch ID no longer needs the chat on the allowlist first; once
   sent, the chat is allowlisted on this machine and its last 50 messages are fetched
   ([ADR 16abb6](./docs/architecture/decisions/2026-10-27-16abb6-touch-id-send-adds-the-chat.md)).
+- Fixed: `direct on` missed 1:1 chats WhatsApp addresses by LID (`…@lid`), often most of them; it now covers
+  every 1:1 chat.
 
 ## 0.7.0 — 2026-10-28
 
