@@ -17,6 +17,8 @@ Open WhatsApp's **Message yourself** chat and send:
 | `#wa add me` | your own "Message yourself" chat (also `myself`, `self`); it has no name to match |
 | `#wa remove Field Ops North` | stop capturing and sending |
 | `#wa direct on` / `#wa direct off` | allow, or stop allowing, every 1:1 chat |
+| `#wa notify Claude pings` | make a group a **notification chat**: Claude's messages to it send without Touch ID ([below](#notification-chats)) |
+| `#wa unnotify Claude pings` | stop that; the chat stays allowlisted |
 
 Each machine's bridge applies the command and reacts: ✅ applied · ⏳ pending (no chat with that name seen yet on
 that machine; it applies when the chat appears) · ❓ two or more chats have that name, use the JID · ❌ not
@@ -36,9 +38,19 @@ wa-allow list ops                # filter by name or JID
 wa-allow add "Field Ops North"   # posts "#wa add Field Ops North" to your self-chat → every machine
 wa-allow remove "Field Ops North"
 wa-allow direct on
+wa-allow notify "Claude pings"     # asks for Touch ID on this machine
 ```
 
 `wa-allow add/remove/direct` need the bridge running (`install.sh status`), because they send through it.
+
+## Notification chats
+
+For messages Claude should send while you're away (overnight pings, questions waiting for your answer), keep a
+group with only you in it, or you and one account you control. Create the group with someone, remove them, and
+name it (e.g. "Claude pings"); then `#wa notify Claude pings`. Sends to it never ask, from any session. Before each
+send the bridge checks the group with WhatsApp: more than two members, or you not in it, and it asks for Touch ID
+again ([ADR 17d63a](../architecture/decisions/2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)).
+Replies there are stored like any allowlisted chat.
 
 ## Notes
 

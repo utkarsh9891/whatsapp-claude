@@ -4,7 +4,8 @@ Back to [AGENTS.md](../../AGENTS.md). Paths: [on-disk layout](../architecture/ov
 
 ## Install
 
-Prereqs (macOS): `brew install go uv` (`jq` ships with macOS 15+).
+Prereqs (macOS): `brew install go uv` (`jq` ships with macOS 15+), and the Command Line Tools for `swiftc`
+(`xcode-select --install`), which builds the Touch ID helper.
 
 ```text
 /plugin marketplace add utkarsh9891/whatsapp-claude
@@ -40,6 +41,7 @@ image to scan. On success the background service starts.
 | restart | `install.sh service` |
 | logs | `tail -f ~/.whatsapp-mcp/bridge.log` |
 | stop | `launchctl bootout gui/$(id -u)/com.whatsapp-claude.bridge` |
+| test Touch ID approval | `install.sh approve-test` (one prompt, nothing sent) |
 
 ## Update
 
@@ -70,3 +72,7 @@ delete `~/.whatsapp-mcp` and remove the device under **Linked devices** on the p
 | "WhatsApp tools are blocked in permission mode" | you're in a normal session | use `wa` |
 | `/plugin marketplace add` fails on clone | network blocks SSH | `gh auth login && gh auth setup-git`, or use the HTTPS URL |
 | bridge won't build after an update | `go version` vs `go.mod` | `brew upgrade go` |
+| build fails `unknown architecture arm64e.x1` | a newer SDK than the linker (`ls /Library/Developer/CommandLineTools/SDKs`) | `SDKROOT=…/MacOSX<your macOS>.sdk install.sh`, or reinstall the Command Line Tools |
+| send fails "not approved" | the Touch ID prompt was declined or timed out (2 min) | send again and touch the sensor |
+| send fails "Touch ID isn't available" | lid closed, or locked out after failed attempts | open the lid, or unlock the Mac with your password once |
+| notification chat asks for Touch ID | `tail ~/.whatsapp-mcp/bridge.log`: more than two members, or you're not in it | remove the extra member |

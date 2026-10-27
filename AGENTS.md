@@ -53,6 +53,6 @@ that.
 |---|---|
 | Change what the bridge stores or sends | [bridge module.yaml](./plugins/whatsapp/bridge/module.yaml), then [security model](./docs/architecture/security-model.md) |
 | Add or change an MCP tool | [server module.yaml](./plugins/whatsapp/server/module.yaml), then the [triage skill](./plugins/whatsapp/skills/whatsapp-triage/SKILL.md) |
-| Touch a guard file (`hooks/`, `wa/settings.json`, `bin/wa`, `bridge/config.go`, `bridge/selfcmd.go`, `bin/install.sh`) | [security model](./docs/architecture/security-model.md) and [principle: never weaken a guard](./agent/principles/never-weaken-a-guard.mdc) |
+| Touch a guard file (`hooks/`, `wa/settings.json`, `bin/wa`, `bridge/config.go`, `bridge/selfcmd.go`, `bridge/approve.go`, `approve/`, `bin/install.sh`) | [security model](./docs/architecture/security-model.md) and [principle: never weaken a guard](./agent/principles/never-weaken-a-guard.mdc) |
 | Make a design choice someone could later want to reverse | write an ADR first: [decisions](./docs/architecture/decisions/README.md) |
 | Fix a machine that stopped receiving messages | [runbook § troubleshooting](./docs/operations/runbook.md#troubleshooting) |

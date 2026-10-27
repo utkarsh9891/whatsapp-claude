@@ -13,7 +13,7 @@ runtime:
 tools:
   read: [digest, list_chats, list_messages, get_chat, get_message_context, get_contact_chats,
          get_direct_chat_by_contact, get_last_interaction, search_contacts]
-  act: [send_message, send_file, send_audio_message, download_media, add_chat]   # sends to others and add_chat ask
+  act: [send_message, send_file, send_audio_message, download_media, add_chat]   # sends to others wait for Touch ID in the bridge; add_chat asks
 docs:
   readme: ./README.md
   skill: ../skills/whatsapp-triage/SKILL.md
