@@ -23,6 +23,8 @@ but only relative to a message the requester knows: "the N messages before messa
    machine), the bridge asks the phone for the **50 messages** before that chat's latest known message and
    stores them like any allowlisted message. To have that reference point, the bridge keeps, for **every**
    chat, its latest message's ID, from-me flag and time in `chat_anchors` (no text, no sender, no media).
+   If none is known yet (a chat silent since the bridge was upgraded), it asks when the chat's next message
+   arrives, using that message as the reference (kept in memory only).
    The answer is applied as content only: it does not change chat activity times and its `#wa` commands are
    ignored (an old `remove` must not undo a newer `add`). Not fetched for `#wa direct on` (could be hundreds of
    chats), for commands replayed from the pairing sync (that sync carries history already), or for a pending
@@ -57,7 +59,8 @@ but only relative to a message the requester knows: "the N messages before messa
 ## Alternatives considered
 - **Store every chat's content, show only allowlisted chats to the model:** rejected; puts every group's personal
   data on disk ([e302a3](./2026-10-23-e302a3-allowlist-gates-content-and-sends.md) Assumption #2).
-- **Wait for the next message in the chat and fetch before it:** rejected; a quiet chat would stay empty for days.
+- **Only wait for the next message in the chat and fetch before it:** rejected as the main path; a quiet chat
+  would stay empty for days. Kept as the fallback when no message is known.
 - **Let `add_chat` run without a prompt in auto mode:** rejected; it widens what is stored and who can be sent
   to, which is exactly what an injected message would ask for.
 - **Show the name only:** rejected; group names are chosen by members and can imitate another chat.

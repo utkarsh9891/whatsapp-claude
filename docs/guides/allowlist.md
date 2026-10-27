@@ -43,7 +43,8 @@ wa-allow direct on
 ## Notes
 
 - **History on add:** adding a chat asks your phone for its last 50 messages, so it is useful straight away.
-  The phone must be online; if it isn't, capture starts from the next message. Not done for `#wa direct on`, or
+  The phone must be online; if it isn't, capture starts from the next message. A chat silent since the bridge
+  was upgraded gets its history when its next message arrives. Not done for `#wa direct on`, or
   for a pending name that resolves later.
 - Removing a chat stops capture and sends; already-stored messages stay on each machine until deleted.
 - Hand edits of `~/.whatsapp-mcp/config.json` still work but stay on that machine.

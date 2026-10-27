@@ -10,6 +10,8 @@ Decisions: [fork](../../../docs/architecture/decisions/2026-10-23-de419c-fork-an
 | `config.go` | **guard file:** data dir, allowlist (`config.json`, re-read on change), bearer token, auth middleware, `safeName`, `sendablePath` (`send_from` folders), QR PNG |
 | `selfcmd.go` | **guard file:** `#wa` allowlist commands from the owner's self-chat: parse, resolve names, apply once, react ([ADR f28675](../../../docs/architecture/decisions/2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md)) |
 | `selfcmd_test.go` | tests for `selfcmd.go` |
+| `history.go` | history on add: chat anchors, the on-demand request to the phone, what an on-demand answer may change |
+| `history_test.go` | tests for `history.go` |
 | `config_test.go` | tests for every function in `config.go` |
 | `fixture_test.go` | writes a fixture `messages.db` through the real `MessageStore` when `FIXTURE_HOME` is set (used by the server tests) |
 
