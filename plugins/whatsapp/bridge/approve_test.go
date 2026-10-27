@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -30,24 +31,30 @@ func TestPromptSafe(t *testing.T) {
 }
 
 func TestApprovalReason(t *testing.T) {
-	cases := []struct{ name, jid, msg, media, want string }{
-		{"Field Ops North", "1@g.us", "fix is live", "",
+	cases := []struct {
+		name, jid, msg, media string
+		adding                bool
+		want                  string
+	}{
+		{"Field Ops North", "1@g.us", "fix is live", "", false,
 			`send "fix is live" to the group "Field Ops North"`},
-		{"Asha", "91@s.whatsapp.net", "hi", "",
+		{"Field Ops North", "1@g.us", "fix is live", "", true,
+			`send "fix is live" to the group "Field Ops North" and start saving its messages`},
+		{"Asha", "91@s.whatsapp.net", "hi", "", false,
 			`send "hi" to "Asha"`},
-		{"", "91@s.whatsapp.net", "hi", "",
+		{"", "91@s.whatsapp.net", "hi", "", false,
 			`send "hi" to 91@s.whatsapp.net`},
-		{"Ops", "1@g.us", "", "/Users/x/Downloads/report.pdf",
+		{"Ops", "1@g.us", "", "/Users/x/Downloads/report.pdf", false,
 			`send the file "report.pdf" to the group "Ops"`},
-		{"Ops", "1@g.us", "see this", "/Users/x/Downloads/report.pdf",
+		{"Ops", "1@g.us", "see this", "/Users/x/Downloads/report.pdf", false,
 			`send the file "report.pdf" with "see this" to the group "Ops"`},
 	}
 	for _, c := range cases {
-		if got := approvalReason(c.name, c.jid, c.msg, c.media); got != c.want {
+		if got := approvalReason(c.name, c.jid, c.msg, c.media, c.adding); got != c.want {
 			t.Errorf("approvalReason = %s\nwant             %s", got, c.want)
 		}
 	}
-	long := approvalReason("Ops", "1@g.us", strings.Repeat("a", 500), "")
+	long := approvalReason("Ops", "1@g.us", strings.Repeat("a", 500), "", false)
 	if strings.Count(long, "a") > 160 || !strings.Contains(long, "…") {
 		t.Errorf("long text not cut: %d chars", len(long))
 	}
@@ -149,5 +156,24 @@ func TestNotifyReason(t *testing.T) {
 		if got := notifyReason(s, arg); got != want {
 			t.Errorf("notifyReason(%q) = %s\nwant %s", arg, got, want)
 		}
+	}
+}
+
+// A chat the owner approved a send to is added here, once, without touching other entries (security model T5).
+func TestAllowSentChat(t *testing.T) {
+	setHome(t)
+	writeConfig(t, `{"allow_chats":["1@g.us"],"notify_chats":["5@g.us"]}`)
+	before, err := allowSentChat("2@g.us")
+	if err != nil || !reflect.DeepEqual(before, []string{"1@g.us"}) {
+		t.Fatalf("before = %v, %v", before, err)
+	}
+	if !isAllowed("2@g.us") || !isAllowed("1@g.us") || !isNotifyChat("5@g.us") {
+		t.Fatalf("config after add: %+v", currentConfig())
+	}
+	if got := addedChats(before, currentConfig().AllowChats); !reflect.DeepEqual(got, []string{"2@g.us"}) {
+		t.Fatalf("added = %v", got)
+	}
+	if _, err := allowSentChat("2@g.us"); err != nil || len(currentConfig().AllowChats) != 2 {
+		t.Fatalf("second add duplicated: %v", currentConfig().AllowChats)
 	}
 }

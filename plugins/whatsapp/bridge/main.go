@@ -235,12 +235,11 @@ func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipien
 		}
 	}
 
-	if !isAllowed(recipientJID.String()) {
-		return false, fmt.Sprintf("%s is not in allow_chats in %s", recipientJID, waPath("config.json"))
-	}
-
-	// Anyone but the owner (or a notification chat) needs the owner's Touch ID (ADR 2026-10-27-17d63a)
-	if err := sendApproval(client, store, recipientJID, message, mediaPath); err != nil {
+	// Anyone but the owner (or a notification chat) needs the owner's Touch ID (ADR 2026-10-27-17d63a);
+	// a chat not on the allowlist may be sent to that way and is added once sent (ADR 2026-10-27-16abb6)
+	listed := isAllowed(recipientJID.String())
+	asked, err := sendApproval(client, store, recipientJID, message, mediaPath, !listed)
+	if err != nil {
 		return false, err.Error()
 	}
 
@@ -389,6 +388,14 @@ func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipien
 		return false, fmt.Sprintf("Error sending message: %v", err)
 	}
 
+	if !listed && asked {
+		before, err := allowSentChat(recipientJID.ToNonAD().String())
+		if err != nil {
+			return true, fmt.Sprintf("Message sent to %s, but adding it to the allowlist failed: %v", recipient, err)
+		}
+		requestHistoryForAdded(client, store, before)
+		return true, fmt.Sprintf("Message sent to %s; its messages are now saved on this machine", recipient)
+	}
 	return true, fmt.Sprintf("Message sent to %s", recipient)
 }
 
