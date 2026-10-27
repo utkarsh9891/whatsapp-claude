@@ -1,0 +1,88 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""Send a WhatsApp message from any terminal, through the local bridge.
+
+  wa-send <chat> <text…>                  send text ("-" reads it from stdin)
+  wa-send <chat> --file <path> [text…]    send a file, with optional caption text
+
+<chat> is a JID, "me" (your own chat), or a chat's exact name (any case). The bridge decides:
+your own chat and notification chats send straight away; anyone else waits for your Touch ID.
+Only allowlisted chats can be sent to (wa-allow). ADR 2026-10-27-17d63a.
+"""
+import json
+import os
+import sqlite3
+import sys
+import urllib.error
+import urllib.request
+
+HOME = os.environ.get("WA_HOME") or os.path.expanduser("~/.whatsapp-mcp")
+
+
+def ro(db):
+    path = os.path.join(HOME, db)
+    if not os.path.exists(path):
+        sys.exit("No WhatsApp store: is the bridge paired and running? (install.sh status)")
+    return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+
+
+def resolve(chat):
+    """A JID for chat: as given, the owner's own chat for "me", or the one chat with that exact name."""
+    if "@" in chat and " " not in chat:
+        return chat
+    if chat.lower() in ("me", "myself", "self"):
+        row = ro("whatsapp.db").execute("SELECT jid FROM whatsmeow_device LIMIT 1").fetchone()
+        if not row:
+            sys.exit("Not paired: install.sh pair")
+        return row[0].split("@")[0].split(":")[0] + "@s.whatsapp.net"
+    want = " ".join(chat.split()).lower()
+    rows = [(j, n) for j, n in ro("messages.db").execute("SELECT jid, COALESCE(name, '') FROM chats")
+            if " ".join(n.split()).lower() == want]
+    if len(rows) == 1:
+        return rows[0][0]
+    if not rows:
+        sys.exit(f"No chat named {chat!r} on this machine (wa-allow list <part of the name>)")
+    sys.exit(f"Several chats are named {chat!r}; pass the JID:\n" + "\n".join(f"  {j}" for j, _ in rows))
+
+
+def main(argv):
+    if len(argv) < 2 or argv[0] in ("-h", "--help"):
+        sys.exit(__doc__.strip())
+    chat, rest = argv[0], argv[1:]
+    media = ""
+    if rest[0] == "--file":
+        if len(rest) < 2:
+            sys.exit(__doc__.strip())
+        media, rest = os.path.abspath(os.path.expanduser(rest[1])), rest[2:]
+    text = sys.stdin.read().strip() if rest == ["-"] else " ".join(rest)
+    if not text and not media:
+        sys.exit("Nothing to send")
+    try:
+        with open(os.path.join(HOME, "config.json")) as f:
+            port = json.load(f).get("port") or 8080
+        with open(os.path.join(HOME, "token")) as f:
+            token = f.read().strip()
+    except (OSError, ValueError):
+        sys.exit("No bridge config or token: is the bridge set up? (install.sh status)")
+    jid = resolve(chat)
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}/api/send",
+        data=json.dumps({"recipient": jid, "message": text, "media_path": media}).encode(),
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            body = json.load(r)
+    except urllib.error.HTTPError as e:
+        body = json.loads(e.read() or b"{}")
+    except urllib.error.URLError as e:
+        sys.exit(f"bridge not reachable ({e.reason}); start it with install.sh service")
+    print(f"{jid}: {body.get('message', body)}")
+    sys.exit(0 if body.get("success") else 1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

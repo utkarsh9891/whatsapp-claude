@@ -1,10 +1,12 @@
 #!/bin/bash
 # whatsapp-claude: build, pair, run as a login service.
 #
-#   install.sh             build the bridge + MCP server into ~/.whatsapp-mcp, write configs, link `wa` + `wa-allow`
+#   install.sh             build the bridge, its Touch ID helper and the MCP server into ~/.whatsapp-mcp, write
+#                          configs, link `wa`, `wa-allow` and `wa-send`
 #   install.sh pair [phone] link this machine to WhatsApp (pairing code if phone given, else QR), then start the service
 #   install.sh service     (re)start the background bridge (launchd)
 #   install.sh status      show what is installed and running
+#   install.sh approve-test show one Touch ID prompt from the running bridge; nothing is sent
 #   install.sh uninstall   stop the service and remove launchers (keeps ~/.whatsapp-mcp data)
 set -euo pipefail
 
@@ -23,6 +25,7 @@ need() {
   local missing=()
   for t in go uv jq claude; do command -v "$t" >/dev/null || missing+=("$t"); done
   [ ${#missing[@]} -eq 0 ] || die "missing: ${missing[*]} (brew install ${missing[*]/claude/})"
+  xcrun --find swiftc >/dev/null 2>&1 || die "missing: swiftc (xcode-select --install)"
 }
 
 do_install() {
@@ -34,11 +37,13 @@ do_install() {
   rm -rf "$APP.new"
   say "building bridge…"
   (cd "$PLUGIN_ROOT/bridge" && go build -o "$APP.new/whatsapp-bridge" .)
+  say "building Touch ID helper…"
+  xcrun swiftc -O -o "$APP.new/wa-approve" "$PLUGIN_ROOT/approve/wa-approve.swift"
   say "installing MCP server…"
   cp -R "$PLUGIN_ROOT/server" "$APP.new/server"
   rm -rf "$APP.new/server/.venv" "$APP.new/server/tests"
   (cd "$APP.new/server" && uv sync --quiet --no-dev)
-  cp "$PLUGIN_ROOT/bin/wa" "$PLUGIN_ROOT/bin/wa-allow" "$APP.new/"
+  cp "$PLUGIN_ROOT/bin/wa" "$PLUGIN_ROOT/bin/wa-allow" "$PLUGIN_ROOT/bin/wa-send" "$APP.new/"
   # stop the bridge before swapping the binary it runs from
   $was_running && stop_service
   rm -rf "$APP" && mv "$APP.new" "$APP"
@@ -52,6 +57,7 @@ do_install() {
 
   ln -sf "$APP/wa" "$BIN_DIR/wa"
   ln -sf "$APP/wa-allow" "$BIN_DIR/wa-allow"
+  ln -sf "$APP/wa-send" "$BIN_DIR/wa-send"
   case ":$PATH:" in *":$BIN_DIR:"*) ;; *) say "note: add $BIN_DIR to PATH (echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.zshrc)";; esac
 
   if $was_running; then do_service; fi
@@ -160,14 +166,23 @@ do_status() {
     say "service:   not loaded"
   fi
   say "allowlist: $(jq -r '"\(.allow_chats | length) chats, direct=\(.allow_direct_chats)"' "$WA_HOME/config.json" 2>/dev/null || echo none)"
+  say "approval:  $( [ -x "$APP/wa-approve" ] && echo 'Touch ID (install.sh approve-test to try it)' || echo 'none: sends to others ask in Claude')"
+  say "notify:    $(jq -r '.notify_chats // [] | length' "$WA_HOME/config.json" 2>/dev/null || echo 0) notification chats"
   say "launcher:  $(command -v wa || echo "not on PATH ($BIN_DIR)")"
   say "last log:  $(tail -1 "$WA_HOME/bridge.log" 2>/dev/null || echo -)"
+}
+
+do_approve_test() {
+  service_loaded || die "bridge not running: install.sh service"
+  say "a Touch ID prompt should appear now; nothing will be sent"
+  curl -sS -X POST "http://127.0.0.1:$(jq -r '.port // 8080' "$WA_HOME/config.json")/api/approve-test" \
+    -H "Authorization: Bearer $(cat "$WA_HOME/token")" -H "Content-Type: application/json" -d '{}' | jq -r .message
 }
 
 do_uninstall() {
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
   launchctl bootout "gui/$(id -u)/$OLD_LABEL" 2>/dev/null || true
-  rm -f "$PLIST" "$HOME/Library/LaunchAgents/$OLD_LABEL.plist" "$BIN_DIR/wa" "$BIN_DIR/wa-allow"
+  rm -f "$PLIST" "$HOME/Library/LaunchAgents/$OLD_LABEL.plist" "$BIN_DIR/wa" "$BIN_DIR/wa-allow" "$BIN_DIR/wa-send"
   rm -rf "$APP"
   say "removed service and launchers; data kept in $WA_HOME (delete it to unlink fully, and remove the device in WhatsApp → Linked devices)"
 }
@@ -177,6 +192,7 @@ case "${1:-install}" in
   pair) shift; do_pair "${1:-}" ;;
   service) do_service ;;
   status) do_status ;;
+  approve-test) do_approve_test ;;
   uninstall) do_uninstall ;;
-  *) sed -n '2,9p' "$0"; exit 1 ;;
+  *) sed -n '2,11p' "$0"; exit 1 ;;
 esac

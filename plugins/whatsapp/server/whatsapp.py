@@ -657,7 +657,7 @@ def send_message(recipient: str, message: str) -> Tuple[bool, str]:
             "message": message,
         }
         
-        response = requests.post(url, json=payload, headers=_auth_headers(), timeout=120)
+        response = requests.post(url, json=payload, headers=_auth_headers(), timeout=180)  # may wait for Touch ID
         
         # Check if the request was successful
         if response.status_code == 200:
@@ -719,7 +719,7 @@ def send_file(recipient: str, media_path: str) -> Tuple[bool, str]:
             "media_path": media_path
         }
         
-        response = requests.post(url, json=payload, headers=_auth_headers(), timeout=120)
+        response = requests.post(url, json=payload, headers=_auth_headers(), timeout=180)  # may wait for Touch ID
         
         # Check if the request was successful
         if response.status_code == 200:
@@ -764,7 +764,7 @@ def send_audio_message(recipient: str, media_path: str) -> Tuple[bool, str]:
             "media_path": media_path
         }
         
-        response = requests.post(url, json=payload, headers=_auth_headers(), timeout=120)
+        response = requests.post(url, json=payload, headers=_auth_headers(), timeout=180)  # may wait for Touch ID
         
         # Check if the request was successful
         if response.status_code == 200:

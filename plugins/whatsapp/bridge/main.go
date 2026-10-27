@@ -209,7 +209,7 @@ type SendMessageRequest struct {
 }
 
 // Function to send a WhatsApp message
-func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message string, mediaPath string) (bool, string) {
+func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipient string, message string, mediaPath string) (bool, string) {
 	if !client.IsConnected() {
 		return false, "Not connected to WhatsApp"
 	}
@@ -237,6 +237,11 @@ func sendWhatsAppMessage(client *whatsmeow.Client, recipient string, message str
 
 	if !isAllowed(recipientJID.String()) {
 		return false, fmt.Sprintf("%s is not in allow_chats in %s", recipientJID, waPath("config.json"))
+	}
+
+	// Anyone but the owner (or a notification chat) needs the owner's Touch ID (ADR 2026-10-27-17d63a)
+	if err := sendApproval(client, store, recipientJID, message, mediaPath); err != nil {
+		return false, err.Error()
 	}
 
 	msg := &waProto.Message{}
@@ -739,7 +744,7 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		}
 
 		// Send the message
-		success, message := sendWhatsAppMessage(client, req.Recipient, req.Message, req.MediaPath)
+		success, message := sendWhatsAppMessage(client, messageStore, req.Recipient, req.Message, req.MediaPath)
 		fmt.Println("Send:", success, message)
 		// Set response headers
 		w.Header().Set("Content-Type", "application/json")
@@ -834,6 +839,14 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 			json.NewEncoder(w).Encode(CommandResponse{Message: "Not connected to WhatsApp"})
 			return
 		}
+		// From the phone the self-chat is the proof; from this machine, Touch ID (ADR 2026-10-27-17d63a)
+		if cmd.Op == "notify" {
+			if err := approver(fmt.Sprintf("make %q a WhatsApp notification chat (messages to it send without asking)", promptSafe(cmd.Arg, 80))); err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(CommandResponse{Message: err.Error()})
+				return
+			}
+		}
 		resp, err := client.SendMessage(context.Background(), self, &waProto.Message{Conversation: proto.String(text)})
 		if err != nil {
 			w.WriteHeader(http.StatusBadGateway)
@@ -847,13 +860,28 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 			json.NewEncoder(w).Encode(CommandResponse{Message: err.Error()})
 			return
 		}
-		if cmd.Op == "add" {
+		if cmd.Op == "add" || cmd.Op == "notify" {
 			requestHistoryForAdded(client, messageStore, before)
 		}
 		if emoji, ok := resultReaction[result]; ok {
 			client.SendMessage(context.Background(), self, client.BuildReaction(self, self, resp.ID, emoji))
 		}
 		json.NewEncoder(w).Encode(CommandResponse{Success: true, Result: result, Message: "posted to your self-chat; other machines apply it as they receive it"})
+	}))
+
+	// Shows one Touch ID prompt and reports the result; nothing is sent (install.sh approve-test)
+	http.HandleFunc("/api/approve-test", requireAuth(token, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := approver("test WhatsApp send approval (nothing will be sent)"); err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(CommandResponse{Message: err.Error()})
+			return
+		}
+		json.NewEncoder(w).Encode(CommandResponse{Success: true, Message: "approved; sends to others will ask like this"})
 	}))
 
 	// Start the server, loopback only
