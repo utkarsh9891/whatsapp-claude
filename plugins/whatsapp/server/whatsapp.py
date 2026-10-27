@@ -675,6 +675,32 @@ def send_message(recipient: str, message: str) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Unexpected error: {str(e)}"
 
+def add_chat(chat: str) -> Tuple[bool, str]:
+    """Allowlist a chat on every machine by posting "#wa add <chat>" through the bridge (POST /api/command).
+    The bridge then asks the phone for the chat's recent history. ADR 2026-10-27-a8ea3b."""
+    chat = " ".join(chat.split())
+    if not chat:
+        return False, "A chat name or JID must be provided"
+    meaning = {
+        "applied": "added; its last 50 messages are being fetched from your phone (give it a few seconds)",
+        "pending": "pending: no chat with that name seen yet on this machine; applies when it appears",
+        "ambiguous": "not added: several chats have that name; pass the JID from list_chats",
+        "duplicate": "already applied",
+    }
+    try:
+        response = requests.post(f"{WHATSAPP_API_BASE_URL}/command", json={"command": f"add {chat}"},
+                                 headers=_auth_headers(), timeout=60)
+        result = response.json()
+        if response.status_code != 200:
+            return False, result.get("message", f"HTTP {response.status_code}")
+        return result.get("result") in ("applied", "pending", "duplicate"), meaning.get(result.get("result"), str(result.get("result")))
+    except OSError as e:
+        return False, f"Bridge token unreadable, is the bridge set up? {e}"
+    except requests.RequestException as e:
+        return False, f"Request error: {str(e)}"
+    except ValueError:
+        return False, f"Error parsing response: {response.text}"
+
 def send_file(recipient: str, media_path: str) -> Tuple[bool, str]:
     try:
         # Validate input

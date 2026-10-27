@@ -11,7 +11,7 @@
 
 add/remove/direct post "#wa <command>" to your "Message yourself" chat through the
 local bridge, so every linked machine applies it. The same commands can be typed
-in that chat on your phone. History from before a chat was added is not fetched.
+in that chat on your phone. Adding a chat fetches its last 50 messages from your phone.
 """
 import json
 import os
