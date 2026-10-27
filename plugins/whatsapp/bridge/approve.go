@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 )
 
@@ -104,7 +105,7 @@ func chatTarget(chatName, chatJID string) string {
 
 // approvalReason is the text of the Touch ID prompt, which macOS shows after
 // "WhatsApp for Claude is trying to".
-func approvalReason(chatName, chatJID, message, mediaPath string) string {
+func approvalReason(chatName, chatJID, message, mediaPath string, adding bool) string {
 	what := fmt.Sprintf("%q", promptSafe(message, 150))
 	if mediaPath != "" {
 		what = fmt.Sprintf("the file %q", promptSafe(filepath.Base(mediaPath), 80))
@@ -112,7 +113,11 @@ func approvalReason(chatName, chatJID, message, mediaPath string) string {
 			what += fmt.Sprintf(" with %q", promptSafe(message, 100))
 		}
 	}
-	return fmt.Sprintf("send %s to %s", what, chatTarget(chatName, chatJID))
+	reason := fmt.Sprintf("send %s to %s", what, chatTarget(chatName, chatJID))
+	if adding {
+		reason += " and start saving its messages"
+	}
+	return reason
 }
 
 // notifyReason is the prompt for making a chat a notification chat from this machine.
@@ -156,10 +161,12 @@ func notifyMembersOK(chat types.JID, members []types.GroupParticipant, ownPN, ow
 
 // sendApproval decides whether a send may go out: to the owner's own chat, yes; to a
 // notification chat that can only reach the owner, yes; anything else waits for Touch ID.
-func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID, message, mediaPath string) error {
+// asked reports that the owner approved it with Touch ID. adding says the chat isn't
+// allowlisted yet, which the prompt mentions.
+func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID, message, mediaPath string, adding bool) (asked bool, err error) {
 	ownPN, ownLID := ownJIDs(client)
 	if isSelfChat(chat, ownPN, ownLID) {
-		return nil
+		return false, nil
 	}
 	if isNotifyChat(chat.String()) {
 		info, err := client.GetGroupInfo(context.Background(), chat)
@@ -167,11 +174,43 @@ func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID,
 			err = notifyMembersOK(chat, info.Participants, ownPN, ownLID)
 		}
 		if err == nil {
-			return nil
+			return false, nil
 		}
 		fmt.Printf("Notification chat not usable unattended (%v); asking for Touch ID\n", err)
 	}
-	return approver(approvalReason(store.chatName(chat.String()), chat.String(), message, mediaPath))
+	if err := approver(approvalReason(store.chatName(chat.String()), chat.String(), message, mediaPath, adding)); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// syncAddedChat tells the owner's other machines to add jid, by posting "#wa add <jid>" to
+// the first notification chat; with none it does nothing rather than write to the
+// self-chat (ADR 2026-10-27-fc6f0e). It reports whether it posted.
+func syncAddedChat(client *whatsmeow.Client, jid string) bool {
+	notify := currentConfig().NotifyChats
+	self, _ := ownJIDs(client)
+	post := commandChat(notify, self)
+	if post.Server != types.GroupServer {
+		return false
+	}
+	text := commandPrefix + " add " + jid
+	if _, err := client.SendMessage(context.Background(), post, &waE2E.Message{Conversation: &text}); err != nil {
+		fmt.Printf("Failed to sync an added chat to other machines: %v\n", err)
+		return false
+	}
+	return true
+}
+
+// allowSentChat adds a chat the owner approved a send to, on this machine, and returns
+// the allowlist before the change.
+func allowSentChat(jid string) (before []string, err error) {
+	_, err = mutateConfig(func(c *Config) string {
+		before = append([]string(nil), c.AllowChats...)
+		c.AllowChats = addUnique(c.AllowChats, jid)
+		return resultApplied
+	})
+	return before, err
 }
 
 // chatName is a chat's stored name, or "" if unknown.

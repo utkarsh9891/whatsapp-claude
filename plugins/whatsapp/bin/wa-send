@@ -9,7 +9,7 @@
 
 <chat> is a JID, "me" (your own chat), or a chat's exact name (any case). The bridge decides:
 your own chat and notification chats send straight away; anyone else waits for your Touch ID.
-Only allowlisted chats can be sent to (wa-allow). ADR 2026-10-27-17d63a.
+A chat not on the allowlist is added once you approve a send to it. ADRs 2026-10-27-17d63a, 16abb6.
 """
 import json
 import os

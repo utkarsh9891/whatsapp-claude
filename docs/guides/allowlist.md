@@ -1,14 +1,17 @@
 # Choosing which chats are captured
 
 Back to [AGENTS.md](../../AGENTS.md). Decisions: [allowlist](../architecture/decisions/2026-10-23-e302a3-allowlist-gates-content-and-sends.md),
-[shared through the self-chat](../architecture/decisions/2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md).
+[shared through the self-chat](../architecture/decisions/2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md)
+and [notification chats](../architecture/decisions/2026-10-27-fc6f0e-commands-through-notification-chats.md).
 
 Nothing is captured until you allow it. The bridge keeps every chat's **name** so you can find it, but stores
-**messages**, downloads media and **sends** only for allowlisted chats.
+**messages** and downloads media only for allowlisted chats. **Sending to a chat adds it:** a send you approve
+with Touch ID can go to any chat, and once it is sent, that chat is allowlisted on this machine and its last 50
+messages are fetched ([ADR 16abb6](../architecture/decisions/2026-10-27-16abb6-touch-id-send-adds-the-chat.md)).
 
 ## From your phone (applies to every machine)
 
-Open WhatsApp's **Message yourself** chat and send:
+In a notification chat (e.g. Claude pings), or in WhatsApp's **Message yourself** chat, send:
 
 | Message | Effect |
 |---|---|
@@ -16,7 +19,7 @@ Open WhatsApp's **Message yourself** chat and send:
 | `#wa add 1203630000@g.us` | the same, by JID (use when two chats share a name) |
 | `#wa add me` | your own "Message yourself" chat (also `myself`, `self`); it has no name to match |
 | `#wa remove Field Ops North` | stop capturing and sending |
-| `#wa direct on` / `#wa direct off` | allow, or stop allowing, every 1:1 chat |
+| `#wa direct on` / `#wa direct off` | allow, or stop allowing, every 1:1 chat (by phone number or LID) |
 | `#wa notify Claude pings` | make a group a **notification chat**: Claude's messages to it send without Touch ID ([below](#notification-chats)) |
 | `#wa unnotify Claude pings` | stop that; the chat stays allowlisted |
 
@@ -35,7 +38,7 @@ you first and names the chat; it then works like `#wa add`. Not available in `wa
 ```bash
 wa-allow list                    # every chat seen; * allowlisted, ⏳ pending names
 wa-allow list ops                # filter by name or JID
-wa-allow add "Field Ops North"   # posts "#wa add Field Ops North" to your self-chat → every machine
+wa-allow add "Field Ops North"   # posts "#wa add Field Ops North" to your notification chat → every machine
 wa-allow remove "Field Ops North"
 wa-allow direct on
 wa-allow notify "Claude pings"     # asks for Touch ID on this machine
@@ -50,7 +53,9 @@ group with only you in it, or you and one account you control. Create the group 
 name it (e.g. "Claude pings"); then `#wa notify Claude pings`. Sends to it never ask, from any session. Before each
 send the bridge checks the group with WhatsApp: more than two members, or you not in it, and it asks for Touch ID
 again ([ADR 17d63a](../architecture/decisions/2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)).
-Replies there are stored like any allowlisted chat.
+Replies there are stored like any allowlisted chat. Once you have one, `#wa` commands go there instead of your
+self-chat: `wa-allow` posts them there, and chats added by sending are synced through it. A second machine joins
+with `wa-allow notify "Claude pings"` once (Touch ID).
 
 ## Notes
 

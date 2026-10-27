@@ -67,7 +67,6 @@ delete `~/.whatsapp-mcp` and remove the device under **Linked devices** on the p
 | no new messages | `install.sh status`, `tail ~/.whatsapp-mcp/bridge.log` | `install.sh service`; if logged out, pair again |
 | chat missing in `digest` | `wa-allow list <name>`: no `*`, or ⏳ pending | `wa-allow add` it; for ⏳, check the exact name or use the JID |
 | `#wa` command got no reaction | that machine's bridge is down | `install.sh status`; it applies on reconnect |
-| send refused "not in allow_chats" | as above | allowlist the chat |
 | send refused "media must be inside" | file location | use a file under a `send_from` folder (`~/Downloads`, `~/Desktop`, `~/Documents`, `~/Pictures`, outbox), not in a hidden folder |
 | "WhatsApp tools are blocked in permission mode" | you're in a normal session | use `wa` |
 | `/plugin marketplace add` fails on clone | network blocks SSH | `gh auth login && gh auth setup-git`, or use the HTTPS URL |

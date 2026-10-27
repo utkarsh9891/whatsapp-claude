@@ -143,10 +143,11 @@ func mutateConfig(fn func(*Config) string) (string, error) {
 	return result, nil
 }
 
-// isAllowed reports whether a chat's content may be stored or sent to.
+// isAllowed reports whether a chat's content may be stored, and whether it may be sent
+// to without being added first. allow_direct_chats covers 1:1 chats by phone number and by LID.
 func isAllowed(chatJID string) bool {
 	c := currentConfig()
-	if c.AllowDirectChats && strings.HasSuffix(chatJID, "@s.whatsapp.net") {
+	if c.AllowDirectChats && (strings.HasSuffix(chatJID, "@s.whatsapp.net") || strings.HasSuffix(chatJID, "@lid")) {
 		return true
 	}
 	for _, j := range c.AllowChats {

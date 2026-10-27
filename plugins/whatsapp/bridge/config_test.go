@@ -43,8 +43,8 @@ func TestIsAllowed(t *testing.T) {
 		t.Fatal("allowlist not applied")
 	}
 	writeConfig(t, `{"allow_chats":[],"allow_direct_chats":true}`)
-	if isAllowed("1@g.us") || !isAllowed("91@s.whatsapp.net") {
-		t.Fatal("allow_direct_chats not applied or config not reloaded")
+	if isAllowed("1@g.us") || !isAllowed("91@s.whatsapp.net") || !isAllowed("12345@lid") || isAllowed("status@broadcast") {
+		t.Fatal("allow_direct_chats must cover 1:1 chats by phone number and LID, and nothing else")
 	}
 	writeConfig(t, `{not json`)
 	if !isAllowed("91@s.whatsapp.net") {

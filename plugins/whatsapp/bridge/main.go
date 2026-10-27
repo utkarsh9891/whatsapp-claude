@@ -235,12 +235,11 @@ func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipien
 		}
 	}
 
-	if !isAllowed(recipientJID.String()) {
-		return false, fmt.Sprintf("%s is not in allow_chats in %s", recipientJID, waPath("config.json"))
-	}
-
-	// Anyone but the owner (or a notification chat) needs the owner's Touch ID (ADR 2026-10-27-17d63a)
-	if err := sendApproval(client, store, recipientJID, message, mediaPath); err != nil {
+	// Anyone but the owner (or a notification chat) needs the owner's Touch ID (ADR 2026-10-27-17d63a);
+	// a chat not on the allowlist may be sent to that way and is added once sent (ADR 2026-10-27-16abb6)
+	listed := isAllowed(recipientJID.String())
+	asked, err := sendApproval(client, store, recipientJID, message, mediaPath, !listed)
+	if err != nil {
 		return false, err.Error()
 	}
 
@@ -389,6 +388,17 @@ func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipien
 		return false, fmt.Sprintf("Error sending message: %v", err)
 	}
 
+	if !listed && asked {
+		before, err := allowSentChat(recipientJID.ToNonAD().String())
+		if err != nil {
+			return true, fmt.Sprintf("Message sent to %s, but adding it to the allowlist failed: %v", recipient, err)
+		}
+		requestHistoryForAdded(client, store, before)
+		if syncAddedChat(client, recipientJID.ToNonAD().String()) {
+			return true, fmt.Sprintf("Message sent to %s; its messages are now saved, here and on your other machines", recipient)
+		}
+		return true, fmt.Sprintf("Message sent to %s; its messages are now saved on this machine", recipient)
+	}
 	return true, fmt.Sprintf("Message sent to %s", recipient)
 }
 
@@ -847,7 +857,12 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 				return
 			}
 		}
-		resp, err := client.SendMessage(context.Background(), self, &waProto.Message{Conversation: proto.String(text)})
+		// Posted where every machine reads commands, keeping the self-chat clean (ADR 2026-10-27-fc6f0e)
+		post := commandChat(currentConfig().NotifyChats, self)
+		if cmd.Op == "notify" {
+			post = notifyPostChat(cmd.Arg, messageStore.lookupChatsByName, currentConfig().NotifyChats, self)
+		}
+		resp, err := client.SendMessage(context.Background(), post, &waProto.Message{Conversation: proto.String(text)})
 		if err != nil {
 			w.WriteHeader(http.StatusBadGateway)
 			json.NewEncoder(w).Encode(CommandResponse{Message: fmt.Sprintf("Error sending command: %v", err)})
@@ -864,9 +879,13 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 			requestHistoryForAdded(client, messageStore, before)
 		}
 		if emoji, ok := resultReaction[result]; ok {
-			client.SendMessage(context.Background(), self, client.BuildReaction(self, self, resp.ID, emoji))
+			client.SendMessage(context.Background(), post, client.BuildReaction(post, self, resp.ID, emoji))
 		}
-		json.NewEncoder(w).Encode(CommandResponse{Success: true, Result: result, Message: "posted to your self-chat; other machines apply it as they receive it"})
+		where := "your self-chat"
+		if post.Server == types.GroupServer {
+			where = fmt.Sprintf("%q", messageStore.chatName(post.String()))
+		}
+		json.NewEncoder(w).Encode(CommandResponse{Success: true, Result: result, Message: "posted to " + where + "; other machines apply it as they receive it"})
 	}))
 
 	// Shows one Touch ID prompt and reports the result; nothing is sent (install.sh approve-test)

@@ -80,10 +80,48 @@ func isSelfChat(chat, ownPN, ownLID types.JID) bool {
 	return ownLID.User != "" && chat.User == ownLID.User && chat.Server == types.HiddenUserServer
 }
 
-// obeyCommand reports whether a message may act as an allowlist command: only
-// one the owner sent, in the owner's own chat.
-func obeyCommand(fromMe bool, chat, ownPN, ownLID types.JID) bool {
-	return fromMe && isSelfChat(chat, ownPN, ownLID)
+// obeyCommand reports whether a message may act as an allowlist command: only one
+// the owner's account sent, in a control chat: the owner's own chat or a notification
+// chat (ADR 2026-10-27-fc6f0e). The other member of a notification group can't issue one.
+func obeyCommand(fromMe bool, chat, ownPN, ownLID types.JID, notifyChats []string) bool {
+	if !fromMe {
+		return false
+	}
+	if isSelfChat(chat, ownPN, ownLID) {
+		return true
+	}
+	for _, j := range notifyChats {
+		if chat.Server == types.GroupServer && j == chat.ToNonAD().String() {
+			return true
+		}
+	}
+	return false
+}
+
+// commandChat is where this machine posts #wa commands: the first notification chat,
+// else the owner's own chat.
+func commandChat(notifyChats []string, ownPN types.JID) types.JID {
+	for _, j := range notifyChats {
+		if c, err := types.ParseJID(j); err == nil && c.Server == types.GroupServer {
+			return c
+		}
+	}
+	return ownPN
+}
+
+// notifyPostChat is where `notify <arg>` from this machine is posted: the group being
+// made a notification chat, when arg names exactly one group; else commandChat.
+func notifyPostChat(arg string, lookup chatLookup, notifyChats []string, ownPN types.JID) types.JID {
+	jids := []string{arg}
+	if !isJID(arg) {
+		jids = lookup(arg)
+	}
+	if len(jids) == 1 {
+		if c, err := types.ParseJID(jids[0]); err == nil && c.Server == types.GroupServer {
+			return c
+		}
+	}
+	return commandChat(notifyChats, ownPN)
 }
 
 // chatLookup returns the JIDs of chats whose name equals name (case-insensitive, trimmed).
@@ -278,7 +316,7 @@ func selfChatJIDs(client *whatsmeow.Client) []string {
 // their own chat. It reports whether text was a command. live controls the reaction.
 func handleSelfCommand(client *whatsmeow.Client, store *MessageStore, chat, sender types.JID, fromMe bool, msgID, text string, live bool) bool {
 	pn, lid := ownJIDs(client)
-	if !obeyCommand(fromMe, chat, pn, lid) {
+	if !obeyCommand(fromMe, chat, pn, lid, currentConfig().NotifyChats) {
 		return false
 	}
 	cmd, isCommand, perr := parseSelfCommand(text)

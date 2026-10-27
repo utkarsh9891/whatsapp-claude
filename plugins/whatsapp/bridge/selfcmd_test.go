@@ -146,14 +146,26 @@ func TestCommandsOnlyFromSelf(t *testing.T) {
 	lid := types.NewJID("12345", types.HiddenUserServer)
 	group := types.NewJID("120363", types.GroupServer)
 	other := types.NewJID("911111", types.DefaultUserServer)
-	if !obeyCommand(true, pn, pn, lid) || !obeyCommand(true, lid, pn, lid) {
+	notify := []string{"120999@g.us"}
+	pings := types.NewJID("120999", types.GroupServer)
+	if !obeyCommand(true, pn, pn, lid, nil) || !obeyCommand(true, lid, pn, lid, nil) {
 		t.Fatal("owner's own chat must be obeyed")
 	}
-	if obeyCommand(false, pn, pn, lid) {
+	if obeyCommand(false, pn, pn, lid, nil) {
 		t.Fatal("a message not from me in my chat must be ignored")
 	}
-	if obeyCommand(true, group, pn, lid) || obeyCommand(true, other, pn, lid) {
+	if obeyCommand(true, group, pn, lid, notify) || obeyCommand(true, other, pn, lid, notify) {
 		t.Fatal("my #wa messages in other chats must be ignored")
+	}
+	// ADR 2026-10-27-fc6f0e: notification chats are control chats, for my messages only
+	if !obeyCommand(true, pings, pn, lid, notify) {
+		t.Fatal("my command in a notification chat must be obeyed")
+	}
+	if obeyCommand(false, pings, pn, lid, notify) {
+		t.Fatal("the other member of a notification chat must not issue commands")
+	}
+	if obeyCommand(true, types.NewJID("120999", types.DefaultUserServer), pn, lid, notify) {
+		t.Fatal("notification chat digits on another server must not count")
 	}
 }
 
@@ -193,5 +205,24 @@ func TestAddMeClearsPendingMyself(t *testing.T) {
 	}
 	if n := currentConfig().AllowNames; len(n) != 1 || n[0] != "field ops east" {
 		t.Fatalf("want only the unrelated pending name kept, got %+v", n)
+	}
+}
+
+func TestCommandChat(t *testing.T) {
+	pn := types.NewJID("919999", types.DefaultUserServer)
+	if got := commandChat(nil, pn); got != pn {
+		t.Fatalf("no notification chat: %v, want the self-chat", got)
+	}
+	if got := commandChat([]string{"bad", "5@g.us", "6@g.us"}, pn); got.String() != "5@g.us" {
+		t.Fatalf("got %v, want the first notification group", got)
+	}
+	lookup := lookupFrom(map[string]string{"7@g.us": "Todo", "8@g.us": "Twin", "9@g.us": "twin", "91@s.whatsapp.net": "Asha"})
+	for arg, want := range map[string]string{
+		"7@g.us": "7@g.us", "Todo": "7@g.us", // the group being made a notification chat
+		"Twin": "5@g.us", "Asha": "5@g.us", "Never Seen": "5@g.us", "91@s.whatsapp.net": "5@g.us",
+	} {
+		if got := notifyPostChat(arg, lookup, []string{"5@g.us"}, pn); got.String() != want {
+			t.Errorf("notifyPostChat(%q) = %v, want %s", arg, got, want)
+		}
 	}
 }
