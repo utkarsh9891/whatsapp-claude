@@ -40,9 +40,13 @@ seeing and approving it.
 
 - **Unofficial client.** whatsmeow speaks WhatsApp's multi-device protocol; that is against WhatsApp's terms and
   can, rarely, get a number restricted ([ADR de419c](./decisions/2026-10-23-de419c-fork-and-harden-whatsapp-mcp.md)).
-- **Code running as you can rewrite the bridge.** A process with your user's rights can replace the bridge, its
-  helper or `config.json`, or run its own client with `whatsapp.db`; local checks raise the bar for a steered
-  session, they don't stop a determined local attacker.
+- **Code running as you is you.** The bridge, its Touch ID helper, `config.json` and `whatsapp.db` (the WhatsApp
+  session keys) are all owned by your account, and the source is on disk. A process with your rights (a
+  bypass-mode session steered by a web page, file or message) can swap the helper for one that always approves,
+  add a two-member group it shares with you to `notify_chats`, or build a bridge without the check and send with
+  your session keys. Touch ID stops the tools and the API (T4, T14); it does not stop code that sets out to get
+  around it. Only a boundary your account can't cross closes this: another macOS user or root-owned files (needs
+  an admin), or session keys bound to the bridge's code identity in the Keychain.
 - **Injected text can reach a notification chat.** Claude may be steered into posting there unattended; only
   you (and the one other account you chose) see it.
 - **A prompt shows the start of a long message** (about 150 characters); the rest is approved unseen.
