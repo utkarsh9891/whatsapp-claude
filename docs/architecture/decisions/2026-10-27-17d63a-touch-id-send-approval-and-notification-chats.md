@@ -54,14 +54,21 @@ cannot answer that prompt for the owner.
 - Unattended messages work, but only into chats that can't reach other people.
 - A prompt shows at most ~150 characters of the text; longer messages are approved on their start.
 - Sends to others wait while the owner is away from the Mac, and fail after 120 s.
-- Residual: code running as the owner that rewrites the bridge, its helper or `config.json` defeats every local
-  check; this raises the bar for a steered session, it doesn't stop a determined local attacker.
+- Residual, accepted by the owner on 2026-10-28: code running as the owner (a steered bypass-mode session) can
+  swap the helper, add a group it shares with the owner to `notify_chats`, or build a bridge without the check
+  and send with the session keys in `whatsapp.db`. Touch ID stops the tools and the API, not code set on getting
+  around it ([security model](../security-model.md#residual-risks-accepted-stated-plainly)).
 
 ## Alternatives considered
 - **A global switch for unattended sends:** rejected; while on, a message in any group could steer a send to any
   allowlisted group with nobody watching.
 - **Approve in the WhatsApp self-chat:** rejected by the owner; it fills their personal chat with approvals.
 - **A plain macOS dialog:** rejected; a bypass-mode process with accessibility access can click it.
+- **Root-owned bridge, helper and notify list:** rejected; the owner isn't an admin on their Mac, and it leaves
+  the session keys readable, so a rebuilt bridge still sends.
+- **Session keys encrypted with a Keychain key bound to the bridge's code identity:** deferred; it would close all
+  three routes but is days of work (whatsmeow's store has no encryption) for a risk the owner accepts while
+  bypass sessions reach other channels anyway. Revisit if sending from bypass sessions becomes routine.
 - **Keep the guard's `ask` as well:** rejected; two approvals per send, and it still blocks every non-interactive caller.
 
 ## What changed since 2026-10-24-f10233
