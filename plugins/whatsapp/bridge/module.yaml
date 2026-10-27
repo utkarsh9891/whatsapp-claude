@@ -4,11 +4,11 @@ type: service
 purpose: >
   Long-running WhatsApp linked device (whatsmeow). Stores every chat's name and activity time, and message
   content only for allowlisted chats (fetching a chat's last 50 messages from the phone when it is added); serves a loopback-only, token-authenticated API for sends and media
-  downloads, refusing unlisted recipients and files outside the outbox. Hardened fork of lharries/whatsapp-mcp.
+  downloads, refusing files outside the send_from folders; a Touch ID-approved send to an unlisted chat adds it. Hardened fork of lharries/whatsapp-mcp.
   Sends to anyone but the owner wait for the owner's Touch ID (the WhatsApp for Claude helper), except notification chats that can
   only reach the owner.
   Decisions: ADR 2026-10-23-de419c, ADR 2026-10-23-e302a3, ADR 2026-10-23-f28675, ADR 2026-10-27-a8ea3b,
-  ADR 2026-10-27-17d63a.
+  ADR 2026-10-27-17d63a, ADR 2026-10-27-16abb6.
 consumes:
   - go.mau.fi/whatsmeow           # WhatsApp multi-device protocol
   - github.com/mattn/go-sqlite3   # message store (cgo)

@@ -18,8 +18,9 @@ Decisions: [fork](../../../docs/architecture/decisions/2026-10-23-de419c-fork-an
 | `fixture_test.go` | writes a fixture `messages.db` through the real `MessageStore` when `FIXTURE_HOME` is set (used by the server tests) |
 
 **API.** `POST /api/send` (Touch ID first unless to you or a notification chat), `POST /api/download`, `POST /api/command` (posts `#wa <command>` to your self-chat and applies it here; `notify` asks for Touch ID) and `POST /api/approve-test` (one prompt, nothing sent) on `127.0.0.1:<port>` (default 8080), header
-`Authorization: Bearer <~/.whatsapp-mcp/token>`, `Content-Type: application/json`. Sends to a chat not on the
-allowlist, and media outside the `send_from` folders (or in a hidden folder), are refused.
+`Authorization: Bearer <~/.whatsapp-mcp/token>`, `Content-Type: application/json`. A send to a chat not on the
+allowlist asks for Touch ID and, once sent, adds the chat here; media outside the `send_from` folders (or in a
+hidden folder) is refused.
 
 **Store.** `messages.db`: `chats(jid, name, last_message_time)` and `chat_anchors(jid, msg_id, from_me, ts)`
 (latest message ID and time, no text, used to fetch history on add) for every chat; `messages(...)` for

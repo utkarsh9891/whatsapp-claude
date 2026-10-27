@@ -4,7 +4,9 @@ Back to [AGENTS.md](../../AGENTS.md). Decisions: [allowlist](../architecture/dec
 [shared through the self-chat](../architecture/decisions/2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md).
 
 Nothing is captured until you allow it. The bridge keeps every chat's **name** so you can find it, but stores
-**messages**, downloads media and **sends** only for allowlisted chats.
+**messages** and downloads media only for allowlisted chats. **Sending to a chat adds it:** a send you approve
+with Touch ID can go to any chat, and once it is sent, that chat is allowlisted on this machine and its last 50
+messages are fetched ([ADR 16abb6](../architecture/decisions/2026-10-27-16abb6-touch-id-send-adds-the-chat.md)).
 
 ## From your phone (applies to every machine)
 

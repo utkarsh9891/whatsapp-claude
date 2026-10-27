@@ -2,6 +2,12 @@
 
 Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json`). Back to [AGENTS.md](./AGENTS.md).
 
+## 0.8.0 — 2026-10-28
+
+- **Send to any chat:** a send you approve with Touch ID no longer needs the chat on the allowlist first; once
+  sent, the chat is allowlisted on this machine and its last 50 messages are fetched
+  ([ADR 16abb6](./docs/architecture/decisions/2026-10-27-16abb6-touch-id-send-adds-the-chat.md)).
+
 ## 0.7.0 — 2026-10-28
 
 - **Touch ID for sends:** the bridge asks for your Touch ID before every send to anyone but you, whoever calls it,

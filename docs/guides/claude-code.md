@@ -18,7 +18,7 @@ guard hook blocks it.
 | "Download the PDF I sent myself" | downloaded without a prompt to `~/.whatsapp-mcp/media/`; Claude can open it there |
 | "Send ~/Downloads/report.pdf to Field Ops North" | files from `~/Downloads`, `~/Desktop`, `~/Documents`, `~/Pictures` or the outbox; Touch ID unless it is to yourself or a notification chat |
 
-Only allowlisted chats have content: [allowlist guide](./allowlist.md). `wa` refuses bypass and config-override
+Only allowlisted chats have content; sending to a chat (after Touch ID) adds it: [allowlist guide](./allowlist.md). `wa` refuses bypass and config-override
 flags; other Claude flags pass through.
 
 ## Model
