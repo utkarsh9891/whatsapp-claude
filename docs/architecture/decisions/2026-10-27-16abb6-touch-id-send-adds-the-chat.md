@@ -20,9 +20,10 @@ can't also produce; the owner's fingerprint is the one a session can't.
 ## Decision
 1. **The bridge sends to a chat that isn't allowlisted** once the owner approves it with Touch ID. The prompt says
    what else happens: *WhatsApp for Claude is trying to send "…" to the group "X" and start saving its messages.*
-2. **After that send succeeds, the chat is added to the allowlist on this machine** (`config.json`, not through the
-   self-chat, which the owner keeps free of such messages) and its last 50 messages are fetched
-   ([a8ea3b](./2026-10-27-a8ea3b-history-on-add-add-chat-and-named-prompts.md)).
+2. **After that send succeeds, the chat is added to the allowlist** on this machine, and the bridge posts
+   `#wa add <JID>` to the first notification chat so every machine adds it ([2026-10-27-fc6f0e](./2026-10-27-fc6f0e-commands-through-notification-chats.md)); with no notification
+   chat it stays on this machine, because the owner keeps the self-chat free of such messages. Its last 50
+   messages are fetched ([a8ea3b](./2026-10-27-a8ea3b-history-on-add-add-chat-and-named-prompts.md)).
 3. Unchanged: sends to the owner's own chat need nothing and add nothing; notification chats must be allowlisted
    and send unattended; nothing is ever sent to an unlisted chat without Touch ID.
 
@@ -39,13 +40,13 @@ can't also produce; the owner's fingerprint is the one a session can't.
 - One request, one Touch ID, done, for any chat.
 - T5 (wrong group) now rests on the named Touch ID prompt alone, not on a second, independent list: a steered
   session can reach any of the owner's chats if the owner approves without reading.
-- The allowlist now decides what is stored, and grows with the chats the owner messages from each machine.
+- The allowlist now decides what is stored, and grows with the chats the owner messages, on every machine.
 
 ## Alternatives considered
 - **Keep refusing unlisted chats:** rejected by the owner; three steps for one decision.
 - **Send without adding:** rejected by the owner; replies in a chat they wrote to should be visible.
-- **Add through the self-chat so every machine captures it:** rejected for now; posts a `#wa add` message to the
-  owner's personal chat for every new chat.
+- **Sync through the self-chat:** rejected; the owner keeps that chat for personal notes.
+- **Keep it on the sending machine only:** rejected by the owner; both Macs should capture the same chats.
 - **Detect owner-typed requests (a `UserPromptSubmit` hook recording the prompt):** rejected; a steered or
   mistaken session can name a chat the owner mentioned, and code running as the owner can forge the record.
 

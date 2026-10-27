@@ -20,7 +20,7 @@ data_dir: "$WA_HOME (default ~/.whatsapp-mcp)"
 interfaces:
   - "POST 127.0.0.1:<port>/api/send      {recipient, message, media_path?}  Bearer token, application/json"
   - "POST 127.0.0.1:<port>/api/download  {message_id, chat_jid}             Bearer token, application/json"
-  - "POST 127.0.0.1:<port>/api/command   {command}                        Bearer token, application/json; posts #wa <command> to the self-chat"
+  - "POST 127.0.0.1:<port>/api/command   {command}                        Bearer token, application/json; posts #wa <command> to the first notification chat (else the self-chat)"
   - "POST 127.0.0.1:<port>/api/approve-test {}                             Bearer token, application/json; one Touch ID prompt, nothing sent"
   - "runs ./WhatsApp for Claude (next to the bridge binary) for owner approval"
   - "reads #wa commands sent by the owner in their own chat; applies them to config.json"

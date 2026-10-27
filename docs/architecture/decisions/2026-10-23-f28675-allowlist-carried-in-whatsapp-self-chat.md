@@ -1,6 +1,6 @@
 # 2026-10-23-f28675 — The allowlist travels through WhatsApp's "Message yourself" chat
 
-- **Status:** accepted
+- **Status:** amended by [2026-10-27-fc6f0e](./2026-10-27-fc6f0e-commands-through-notification-chats.md)
 - **Date:** 2026-10-23
 - **Deciders:** Utkarsh Upadhyay
 - **Scope:** bridge

@@ -6,7 +6,10 @@ Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json
 
 - **Send to any chat:** a send you approve with Touch ID no longer needs the chat on the allowlist first; once
   sent, the chat is allowlisted on this machine and its last 50 messages are fetched
-  ([ADR 16abb6](./docs/architecture/decisions/2026-10-27-16abb6-touch-id-send-adds-the-chat.md)).
+  ([ADR 16abb6](./docs/architecture/decisions/2026-10-27-16abb6-touch-id-send-adds-the-chat.md)), and synced to
+  your other machines through your notification chat.
+- **Self-chat stays clean:** `#wa` commands also work in notification chats, and the bridge posts them there
+  instead of your self-chat ([ADR fc6f0e](./docs/architecture/decisions/2026-10-27-fc6f0e-commands-through-notification-chats.md)).
 - Fixed: `direct on` missed 1:1 chats WhatsApp addresses by LID (`…@lid`), often most of them; it now covers
   every 1:1 chat.
 
