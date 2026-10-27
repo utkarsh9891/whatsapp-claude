@@ -193,7 +193,8 @@ def send_message(
 ) -> Dict[str, Any]:
     """Send a WhatsApp message to a person or group. For group chats use the JID.
     Only chats in allow_chats (~/.whatsapp-mcp/config.json) can be sent to. Sends to the
-    user's own chat go out directly; sends to anyone else ask the user first.
+    user's own chat and to notification chats go out directly; sends to anyone else wait
+    for the user's Touch ID on the Mac (up to 2 minutes) and fail if it is declined.
 
     Args:
         recipient: The recipient - either a phone number with country code but no + or other symbols,

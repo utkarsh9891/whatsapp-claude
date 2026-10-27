@@ -37,7 +37,7 @@ var resultReaction = map[string]string{
 const maxAppliedCommands = 500
 
 type selfCommand struct {
-	Op  string // add | remove | direct
+	Op  string // add | remove | direct | notify | unnotify
 	Arg string
 }
 
@@ -54,7 +54,7 @@ func parseSelfCommand(text string) (cmd selfCommand, isCommand bool, err error) 
 	cmd.Op = strings.ToLower(fields[1])
 	cmd.Arg = strings.TrimSpace(strings.Join(fields[2:], " "))
 	switch cmd.Op {
-	case "add", "remove":
+	case "add", "remove", "notify", "unnotify":
 		if cmd.Arg == "" {
 			return cmd, true, fmt.Errorf("%s needs a chat name or JID", cmd.Op)
 		}
@@ -127,7 +127,7 @@ func applySelfCommand(msgID string, cmd selfCommand, lookup chatLookup, selfJIDs
 	switch {
 	case (cmd.Op == "add" || cmd.Op == "remove") && self:
 		jids = selfJIDs
-	case (cmd.Op == "add" || cmd.Op == "remove") && !isJID(cmd.Arg):
+	case cmd.Op != "direct" && !self && !isJID(cmd.Arg):
 		jids = lookup(cmd.Arg) // outside the config lock: it queries the message store
 	}
 	return mutateConfig(func(c *Config) string {
@@ -171,6 +171,35 @@ func applySelfCommand(msgID string, cmd selfCommand, lookup chatLookup, selfJIDs
 			}
 		case "direct":
 			c.AllowDirectChats = cmd.Arg == "on"
+		case "notify":
+			// a group this machine has seen, named exactly or by JID; also allowlisted so replies are stored
+			target := ""
+			switch {
+			case self:
+				return resultInvalid // the self-chat sends without asking already
+			case isJID(cmd.Arg):
+				target = cmd.Arg
+			case len(jids) == 1:
+				target = jids[0]
+			case len(jids) > 1:
+				return resultAmbiguous
+			default:
+				return resultInvalid
+			}
+			if !strings.HasSuffix(target, "@g.us") {
+				return resultInvalid
+			}
+			c.AllowChats = addUnique(c.AllowChats, target)
+			c.NotifyChats = addUnique(c.NotifyChats, target)
+		case "unnotify":
+			drop := map[string]bool{}
+			if isJID(cmd.Arg) {
+				drop[cmd.Arg] = true
+			}
+			for _, j := range jids {
+				drop[j] = true
+			}
+			c.NotifyChats = without(c.NotifyChats, drop)
 		}
 		if msgID != "" {
 			c.AppliedCommands = append(c.AppliedCommands, msgID)
@@ -265,7 +294,7 @@ func handleSelfCommand(client *whatsmeow.Client, store *MessageStore, chat, send
 			return true
 		}
 		// Replays from the pairing sync (not live) come with history already
-		if live && cmd.Op == "add" {
+		if live && (cmd.Op == "add" || cmd.Op == "notify") {
 			requestHistoryForAdded(client, store, before)
 		}
 	}

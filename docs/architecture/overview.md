@@ -21,7 +21,7 @@ flowchart LR
 |---|---|---|---|
 | **bridge** | [`plugins/whatsapp/bridge`](../../plugins/whatsapp/bridge/README.md) | long-running process (`launchd` agent `com.whatsapp-claude.bridge`) | the WhatsApp session (`whatsapp.db`), the message store (`messages.db`), the API token, the allowlist check |
 | **server** | [`plugins/whatsapp/server`](../../plugins/whatsapp/server/README.md) | child process of the AI client, per session, over stdio | the MCP tool surface, the `digest` triage view |
-| **plugin** | [`plugins/whatsapp`](../../plugins/whatsapp/README.md) | loaded by Claude Code | the guard hook, `/wa-setup`, the triage skill, `wa`, `wa-allow`, `install.sh` |
+| **plugin** | [`plugins/whatsapp`](../../plugins/whatsapp/README.md) | loaded by Claude Code | the guard hook, `/wa-setup`, the triage skill, `wa`, `wa-allow`, `wa-send`, `install.sh`, the Touch ID helper |
 
 ## Data flow
 
@@ -31,8 +31,9 @@ flowchart LR
 2. **Reading.** The MCP server opens `messages.db` read-only and answers tool calls. `digest` returns counts and
    short snippets (mentions of you, keyword hits) instead of raw history, so a catch-up across many groups
    stays small.
-3. **Sending.** `send_message` / `send_file` call the bridge's local API. The bridge refuses any recipient not
-   on the allowlist and any file outside `~/.whatsapp-mcp/outbox`.
+3. **Sending.** `send_message` / `send_file` (or `wa-send`) call the bridge's local API. The bridge refuses any
+   recipient not on the allowlist and any file outside the `send_from` folders, and asks for your Touch ID
+   before sending to anyone but you or a notification chat (the `WhatsApp for Claude` helper).
 4. **Offline.** A sleeping machine's bridge reconnects on wake and WhatsApp delivers what it queued for that
    device. Each machine is a separate linked device with its own store ([runbook](../operations/runbook.md#several-machines)).
 
@@ -42,11 +43,11 @@ flowchart LR
 |---|---|---|
 | `whatsapp.db` | bridge (whatsmeow) | linked-device keys and session; **deleting it unlinks this machine** |
 | `messages.db` | bridge | `chats` (every chat: JID, name, last message time) and `messages` (allowlisted chats only) |
-| `config.json` | `wa-allow`, you | `allow_chats`, `allow_direct_chats`, `port`; re-read by the bridge on change |
+| `config.json` | `wa-allow`, you | `allow_chats`, `allow_direct_chats`, `notify_chats`, `send_from`, `port`; re-read by the bridge on change |
 | `token` | bridge, first run | 32-byte hex bearer token for the local API (0600) |
 | `media/<chat>/` | bridge | downloaded media, on request only |
 | `outbox/` | you | the only folder files can be sent from |
-| `app/` | `install.sh` | built bridge binary, MCP server, launchers; replaced on reinstall |
+| `app/` | `install.sh` | built bridge binary, `WhatsApp for Claude` Touch ID helper, MCP server, launchers; replaced on reinstall |
 | `mcp.json`, `settings.json`, `workspace/` | `install.sh` | the `wa` session's MCP config, permission settings and neutral working directory |
 | `bridge.log` | launchd | connection events and errors; **never message text** |
 
@@ -58,7 +59,8 @@ plugins/whatsapp/                 the plugin module (module.yaml)
   bridge/                         Go module (module.yaml)
   server/                         Python MCP server (module.yaml)
   hooks/                          bypass guard + its test
-  bin/                            install.sh, wa, wa-allow
+  bin/                            install.sh, wa, wa-allow, wa-send
+  approve/                        wa-approve.swift, the Touch ID helper (installed as "WhatsApp for Claude")
   wa/settings.json                permissions for the wa session
   commands/, skills/              /wa-setup, whatsapp-triage
 docs/                             architecture, decisions, contributing, guides, operations

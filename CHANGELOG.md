@@ -2,6 +2,16 @@
 
 Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json`). Back to [AGENTS.md](./AGENTS.md).
 
+## 0.7.0 — 2026-10-28
+
+- **Touch ID for sends:** the bridge asks for your Touch ID before every send to anyone but you, whoever calls it,
+  so sends work from `wa -p` and any session, and the API token alone can no longer send
+  ([ADR 17d63a](./docs/architecture/decisions/2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)).
+- **Notification chats:** `#wa notify <group>` for a group of only you (and at most one other account); Claude's
+  messages to it send unattended.
+- **`wa-send`:** send from any terminal or `!` command; `install.sh approve-test` checks the prompt.
+- Needs `swiftc` (Command Line Tools) to build the helper.
+
 ## 0.6.0 — 2026-10-27
 
 - **History on add:** adding a chat (phone, `wa-allow`, `add_chat`) fetches its last 50 messages from your phone

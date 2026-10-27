@@ -11,11 +11,12 @@ guard hook blocks it.
 |---|---|
 | "What needs my attention in the last 12 hours?" | `digest` runs (no prompt); you get a summary by group |
 | "Show me the escalation in Field Ops North" | `list_messages` for that chat and window (no prompt) |
-| "Reply in Field Ops North that the fix is live" | the assistant drafts the text and names the chat; the send asks for your approval, naming the chat |
+| "Reply in Field Ops North that the fix is live" | the assistant drafts the text and names the chat; the bridge shows a Touch ID prompt with the chat and the text |
+| "Ping me in Claude pings when the build finishes" | a notification chat: sent without asking, even if you're away |
 | "Start watching Field Ops North" | `add_chat` asks for your approval, naming the chat; then its last 50 messages are fetched |
 | "Send that to myself" / "note this in my self-chat" | sent to your own chat without asking |
 | "Download the PDF I sent myself" | downloaded without a prompt to `~/.whatsapp-mcp/media/`; Claude can open it there |
-| "Send ~/Downloads/report.pdf to Field Ops North" | files from `~/Downloads`, `~/Desktop`, `~/Documents`, `~/Pictures` or the outbox; asks first unless it is to yourself |
+| "Send ~/Downloads/report.pdf to Field Ops North" | files from `~/Downloads`, `~/Desktop`, `~/Documents`, `~/Pictures` or the outbox; Touch ID unless it is to yourself or a notification chat |
 
 Only allowlisted chats have content: [allowlist guide](./allowlist.md). `wa` refuses bypass and config-override
 flags; other Claude flags pass through.
@@ -39,5 +40,19 @@ WA_MODEL=opus wa        # any Claude model name or alias
 wa -p "what needs my attention in the last 12 hours?"
 ```
 
-It is read-only by design, except for sends to yourself: read tools are pre-allowed, and sends to others and
-`add_chat` need an approval a background run can't give, so they are refused.
+Sends work there too: to yourself and notification chats straight away, to anyone else after your Touch ID.
+`add_chat` needs a Claude prompt a background run can't answer, so it is refused.
+
+## Sending from any terminal
+
+`wa-send` sends without a Claude session, through the same bridge checks; from another Claude session use it
+as `! wa-send …`:
+
+```bash
+wa-send "Claude pings" "build finished"         # notification chat: no prompt
+wa-send "Field Ops North" "fix is live"         # Touch ID first
+wa-send me --file ~/Downloads/report.pdf        # your own chat: no prompt
+```
+
+The Touch ID prompt takes Touch ID only (no password), and waits two minutes. With the lid closed, sends to
+others fail; notification chats and your own chat still work.

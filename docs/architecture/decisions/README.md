@@ -31,5 +31,6 @@ agent) knows *why* this repo is the way it is and *when* a decision should be re
 | [2026-10-23-f28675](./2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md) | The allowlist travels through WhatsApp's "Message yourself" chat | bridge | accepted |
 | [2026-10-23-b283a0](./2026-10-23-b283a0-cursor-support-with-taint-guard.md) | Cursor support: a dedicated workspace, read-only, with a taint guard | plugin | superseded by 3d143d |
 | [2026-10-23-3d143d](./2026-10-23-3d143d-drop-cursor-support.md) | Drop Cursor support; Claude Code only | plugin | accepted |
-| [2026-10-24-f10233](./2026-10-24-f10233-auto-mode-self-sends-and-send-folders.md) | Auto mode, free sends to yourself, and sending from everyday folders | plugin | amended by a8ea3b |
-| [2026-10-27-a8ea3b](./2026-10-27-a8ea3b-history-on-add-add-chat-and-named-prompts.md) | Fetch history when a chat is added, add chats from `wa`, and name the chat in prompts | bridge | accepted |
+| [2026-10-24-f10233](./2026-10-24-f10233-auto-mode-self-sends-and-send-folders.md) | Auto mode, free sends to yourself, and sending from everyday folders | plugin | amended by a8ea3b, 17d63a |
+| [2026-10-27-a8ea3b](./2026-10-27-a8ea3b-history-on-add-add-chat-and-named-prompts.md) | Fetch history when a chat is added, add chats from `wa`, and name the chat in prompts | bridge | amended by 17d63a |
+| [2026-10-27-17d63a](./2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md) | The bridge asks for Touch ID before sending to others; notification chats send unattended | bridge | accepted |

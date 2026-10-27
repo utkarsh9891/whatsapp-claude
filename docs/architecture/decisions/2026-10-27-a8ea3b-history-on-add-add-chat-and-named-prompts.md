@@ -1,6 +1,6 @@
 # 2026-10-27-a8ea3b — Fetch history when a chat is added, add chats from `wa`, and name the chat in prompts
 
-- **Status:** accepted
+- **Status:** amended by [2026-10-27-17d63a](./2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)
 - **Date:** 2026-10-27
 - **Deciders:** Utkarsh Upadhyay
 - **Scope:** bridge

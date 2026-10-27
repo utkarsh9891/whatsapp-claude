@@ -5,7 +5,10 @@ purpose: >
   Long-running WhatsApp linked device (whatsmeow). Stores every chat's name and activity time, and message
   content only for allowlisted chats (fetching a chat's last 50 messages from the phone when it is added); serves a loopback-only, token-authenticated API for sends and media
   downloads, refusing unlisted recipients and files outside the outbox. Hardened fork of lharries/whatsapp-mcp.
-  Decisions: ADR 2026-10-23-de419c, ADR 2026-10-23-e302a3, ADR 2026-10-23-f28675, ADR 2026-10-27-a8ea3b.
+  Sends to anyone but the owner wait for the owner's Touch ID (the WhatsApp for Claude helper), except notification chats that can
+  only reach the owner.
+  Decisions: ADR 2026-10-23-de419c, ADR 2026-10-23-e302a3, ADR 2026-10-23-f28675, ADR 2026-10-27-a8ea3b,
+  ADR 2026-10-27-17d63a.
 consumes:
   - go.mau.fi/whatsmeow           # WhatsApp multi-device protocol
   - github.com/mattn/go-sqlite3   # message store (cgo)
@@ -18,12 +21,15 @@ interfaces:
   - "POST 127.0.0.1:<port>/api/send      {recipient, message, media_path?}  Bearer token, application/json"
   - "POST 127.0.0.1:<port>/api/download  {message_id, chat_jid}             Bearer token, application/json"
   - "POST 127.0.0.1:<port>/api/command   {command}                        Bearer token, application/json; posts #wa <command> to the self-chat"
+  - "POST 127.0.0.1:<port>/api/approve-test {}                             Bearer token, application/json; one Touch ID prompt, nothing sent"
+  - "runs ./WhatsApp for Claude (next to the bridge binary) for owner approval"
   - "reads #wa commands sent by the owner in their own chat; applies them to config.json"
   - "writes messages.db (chats, chat_anchors, messages) read by server"
   - "asks the owner's phone for a chat's recent history when the chat is added by a live command"
 guard_files:
   - ./config.go
   - ./selfcmd.go
+  - ./approve.go
 docs:
   readme: ./README.md
   design: ../../../docs/architecture/decisions/2026-10-23-e302a3-allowlist-gates-content-and-sends.md

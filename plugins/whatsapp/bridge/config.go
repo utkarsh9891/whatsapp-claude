@@ -39,6 +39,9 @@ type Config struct {
 	// Folders files may be sent from, besides the outbox; "~/" is the home
 	// folder. Unset means defaultSendFrom. ADR 2026-10-24-f10233.
 	SendFrom []string `json:"send_from,omitempty"`
+	// Groups reserved for messages from Claude: sends to them need no approval
+	// while the group can only reach the owner. ADR 2026-10-27-17d63a.
+	NotifyChats []string `json:"notify_chats,omitempty"`
 }
 
 var defaultSendFrom = []string{"~/Downloads", "~/Desktop", "~/Documents", "~/Pictures"}
@@ -118,6 +121,7 @@ func mutateConfig(fn func(*Config) string) (string, error) {
 	c.AllowChats = append([]string(nil), c.AllowChats...)
 	c.AllowNames = append([]string(nil), c.AllowNames...)
 	c.AppliedCommands = append([]string(nil), c.AppliedCommands...)
+	c.NotifyChats = append([]string(nil), c.NotifyChats...)
 	result := fn(&c)
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {

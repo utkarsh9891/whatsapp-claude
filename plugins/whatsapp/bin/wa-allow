@@ -8,6 +8,10 @@
   wa-allow add <name|jid>      allowlist a chat (exact name, any case, or JID)
   wa-allow remove <name|jid>   stop capturing and sending to a chat
   wa-allow direct on|off       allowlist all 1:1 chats
+  wa-allow notify <name|jid>   make a group a notification chat: Claude's messages to it send without
+                               asking while only you (and at most one other account) are in it; asks
+                               for Touch ID here
+  wa-allow unnotify <name|jid> stop that (the chat stays allowlisted)
 
 add/remove/direct post "#wa <command>" to your "Message yourself" chat through the
 local bridge, so every linked machine applies it. The same commands can be typed
@@ -47,7 +51,7 @@ def command(text):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=180) as r:  # notify waits for Touch ID
             body = json.load(r)
     except urllib.error.HTTPError as e:
         body = json.loads(e.read() or b"{}")
@@ -59,6 +63,7 @@ def command(text):
         "pending": "pending: no chat with that name seen yet on this machine; applies when it appears",
         "ambiguous": "not applied: several chats have that name; pass the JID (wa-allow list <name>)",
         "duplicate": "already applied",
+        "invalid": "not applied: a notification chat must be a group this machine has seen",
     }
     print(f"{text}: {meaning.get(body.get('result'), body.get('result'))} here; {body.get('message', '')}")
 
@@ -87,9 +92,11 @@ def main(argv):
     if cmd == "list":
         for jid, name, last in chats(" ".join(args)):
             print(f"{'*' if jid in allowed else ' '} {last[:16]:16}  {name[:40]:40}  {jid}")
+        for jid in cfg.get("notify_chats", []):
+            print(f"🔔 notification chat: {jid}")
         for name in cfg.get("allow_names", []):
             print(f"⏳ pending name: {name}")
-    elif cmd in ("add", "remove") and args:
+    elif cmd in ("add", "remove", "notify", "unnotify") and args:
         command(f"{cmd} {' '.join(args)}")
     elif cmd == "direct" and args and args[0] in ("on", "off"):
         command(f"direct {args[0]}")

@@ -1,10 +1,12 @@
 #!/bin/bash
-# Guard for WhatsApp MCP tools (ADR 2026-10-23-8f4095, amended by 2026-10-24-f10233 and 2026-10-27-a8ea3b).
+# Guard for WhatsApp MCP tools (ADR 2026-10-23-8f4095, amended by 2026-10-24-f10233, 2026-10-27-a8ea3b
+# and 2026-10-27-17d63a).
 # Incoming messages are untrusted text, so the tools only run in permission modes
 # where Claude still checks actions: manual (default), acceptEdits, plan, auto.
 # Bypass, dontAsk and unknown modes are blocked; malformed input fails closed.
-# Sends are decided here by recipient: to the owner's own chat, allowed; to anyone
-# else, the user is asked. Downloads are allowed. Adding a chat always asks.
+# Sends to the owner's own chat are allowed. Sends to anyone else are allowed when the
+# bridge's Touch ID helper is installed, because the bridge then asks the owner itself;
+# with an older bridge the user is asked here. Downloads are allowed. Adding a chat always asks.
 # Prompts name the chat from the bridge's store next to its JID.
 WA_HOME="${WA_HOME:-$HOME/.whatsapp-mcp}"
 input=$(cat)
@@ -65,6 +67,7 @@ case "$tool" in
   *__send_message|*__send_file|*__send_audio_message)
     recipient=$(jq -r '.tool_input.recipient // ""' <<<"$input")
     is_self "$recipient" && decide allow "Sending to your own chat"
+    [ -x "$WA_HOME/app/WhatsApp for Claude" ] && decide allow "WhatsApp: the bridge asks for your Touch ID before sending to $(chat_label "$recipient")"
     decide ask "WhatsApp: send to $(chat_label "$recipient")? Check the chat and the text."
     ;;
   *__add_chat)
