@@ -5,7 +5,7 @@ purpose: >
   Python MCP server (stdio) exposing the WhatsApp store as tools. Reads messages.db read-only; sends and media
   downloads go through the bridge API with its token. digest gives a cheap triage view across allowlisted chats.
 consumes:
-  - bridge                        # messages.db (read-only), /api/send, /api/download, token
+  - bridge                        # messages.db (read-only), /api/send, /api/download, /api/command, token
   - mcp[cli]                      # FastMCP
 language: python
 runtime:
@@ -13,7 +13,7 @@ runtime:
 tools:
   read: [digest, list_chats, list_messages, get_chat, get_message_context, get_contact_chats,
          get_direct_chat_by_contact, get_last_interaction, search_contacts]
-  act: [send_message, send_file, send_audio_message, download_media]   # always ask in the wa session
+  act: [send_message, send_file, send_audio_message, download_media, add_chat]   # sends to others and add_chat ask
 docs:
   readme: ./README.md
   skill: ../skills/whatsapp-triage/SKILL.md
