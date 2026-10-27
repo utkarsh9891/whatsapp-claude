@@ -38,7 +38,8 @@ but only relative to a message the requester knows: "the N messages before messa
 
 ## Assumptions
 - 1. The phone answers on-demand history requests while it is online (whatsmeow `BuildHistorySyncRequest`,
-     pinned version of 2026-10-17; verified live 2026-10-27).
+     pinned version of 2026-10-17; not yet verified live: the first live add on 2026-10-27 is
+     waiting for the chat's next message).
 - 2. The last 50 messages cover the typical "catch me up on this chat" question.
 - 3. A message ID and time without text are metadata of the same kind as the chat names already stored for
      every chat.
