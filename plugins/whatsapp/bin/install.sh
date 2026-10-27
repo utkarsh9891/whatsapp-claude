@@ -38,7 +38,7 @@ do_install() {
   say "building bridge…"
   (cd "$PLUGIN_ROOT/bridge" && go build -o "$APP.new/whatsapp-bridge" .)
   say "building Touch ID helper…"
-  xcrun swiftc -O -o "$APP.new/wa-approve" "$PLUGIN_ROOT/approve/wa-approve.swift"
+  xcrun swiftc -O -o "$APP.new/WhatsApp for Claude" "$PLUGIN_ROOT/approve/wa-approve.swift"
   say "installing MCP server…"
   cp -R "$PLUGIN_ROOT/server" "$APP.new/server"
   rm -rf "$APP.new/server/.venv" "$APP.new/server/tests"
@@ -166,7 +166,7 @@ do_status() {
     say "service:   not loaded"
   fi
   say "allowlist: $(jq -r '"\(.allow_chats | length) chats, direct=\(.allow_direct_chats)"' "$WA_HOME/config.json" 2>/dev/null || echo none)"
-  say "approval:  $( [ -x "$APP/wa-approve" ] && echo 'Touch ID (install.sh approve-test to try it)' || echo 'none: sends to others ask in Claude')"
+  say "approval:  $( [ -x "$APP/WhatsApp for Claude" ] && echo 'Touch ID (install.sh approve-test to try it)' || echo 'none: sends to others ask in Claude')"
   say "notify:    $(jq -r '.notify_chats // [] | length' "$WA_HOME/config.json" 2>/dev/null || echo 0) notification chats"
   say "launcher:  $(command -v wa || echo "not on PATH ($BIN_DIR)")"
   say "last log:  $(tail -1 "$WA_HOME/bridge.log" 2>/dev/null || echo -)"

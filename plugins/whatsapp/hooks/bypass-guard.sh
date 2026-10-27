@@ -67,7 +67,7 @@ case "$tool" in
   *__send_message|*__send_file|*__send_audio_message)
     recipient=$(jq -r '.tool_input.recipient // ""' <<<"$input")
     is_self "$recipient" && decide allow "Sending to your own chat"
-    [ -x "$WA_HOME/app/wa-approve" ] && decide allow "WhatsApp: the bridge asks for your Touch ID before sending to $(chat_label "$recipient")"
+    [ -x "$WA_HOME/app/WhatsApp for Claude" ] && decide allow "WhatsApp: the bridge asks for your Touch ID before sending to $(chat_label "$recipient")"
     decide ask "WhatsApp: send to $(chat_label "$recipient")? Check the chat and the text."
     ;;
   *__add_chat)

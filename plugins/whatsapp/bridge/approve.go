@@ -33,13 +33,16 @@ var approver = runApprover
 // approveMu keeps to one prompt at a time.
 var approveMu sync.Mutex
 
-// approverPath is wa-approve next to the running bridge binary (installed together).
+// The helper's file name; macOS starts its prompt with it ("WhatsApp for Claude is trying to …").
+const approverName = "WhatsApp for Claude"
+
+// approverPath is the helper next to the running bridge binary (installed together).
 func approverPath() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(filepath.Dir(exe), "wa-approve")
+	return filepath.Join(filepath.Dir(exe), approverName)
 }
 
 func runApprover(reason string) error {
@@ -86,13 +89,22 @@ func promptSafe(s string, max int) string {
 	return strings.TrimSpace(b.String())
 }
 
-// approvalReason is the text of the Touch ID prompt; macOS shows it after
-// "wa-approve is trying to".
-func approvalReason(chatName, chatJID, message, mediaPath string) string {
-	target := chatJID
-	if name := promptSafe(chatName, 60); name != "" {
-		target = fmt.Sprintf("%q (%s)", name, chatJID)
+// chatTarget names a chat for a prompt: `the group "Name"`, `"Name"` for a person, or the JID if no name is known.
+func chatTarget(chatName, chatJID string) string {
+	name := promptSafe(chatName, 60)
+	switch {
+	case name == "":
+		return chatJID
+	case strings.HasSuffix(chatJID, "@"+types.GroupServer):
+		return fmt.Sprintf("the group %q", name)
+	default:
+		return fmt.Sprintf("%q", name)
 	}
+}
+
+// approvalReason is the text of the Touch ID prompt, which macOS shows after
+// "WhatsApp for Claude is trying to".
+func approvalReason(chatName, chatJID, message, mediaPath string) string {
 	what := fmt.Sprintf("%q", promptSafe(message, 150))
 	if mediaPath != "" {
 		what = fmt.Sprintf("the file %q", promptSafe(filepath.Base(mediaPath), 80))
@@ -100,7 +112,16 @@ func approvalReason(chatName, chatJID, message, mediaPath string) string {
 			what += fmt.Sprintf(" with %q", promptSafe(message, 100))
 		}
 	}
-	return fmt.Sprintf("send WhatsApp %s to %s", what, target)
+	return fmt.Sprintf("send %s to %s", what, chatTarget(chatName, chatJID))
+}
+
+// notifyReason is the prompt for making a chat a notification chat from this machine.
+func notifyReason(store *MessageStore, arg string) string {
+	target := fmt.Sprintf("the group %q", promptSafe(arg, 60))
+	if isJID(arg) {
+		target = chatTarget(store.chatName(arg), arg)
+	}
+	return fmt.Sprintf("let Claude message %s without asking you each time", target)
 }
 
 // isNotifyChat reports whether jid is listed in notify_chats.

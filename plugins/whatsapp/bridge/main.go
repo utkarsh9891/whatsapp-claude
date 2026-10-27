@@ -841,7 +841,7 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		}
 		// From the phone the self-chat is the proof; from this machine, Touch ID (ADR 2026-10-27-17d63a)
 		if cmd.Op == "notify" {
-			if err := approver(fmt.Sprintf("make %q a WhatsApp notification chat (messages to it send without asking)", promptSafe(cmd.Arg, 80))); err != nil {
+			if err := approver(notifyReason(messageStore, cmd.Arg)); err != nil {
 				w.WriteHeader(http.StatusForbidden)
 				json.NewEncoder(w).Encode(CommandResponse{Message: err.Error()})
 				return
@@ -876,7 +876,7 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		if err := approver("test WhatsApp send approval (nothing will be sent)"); err != nil {
+		if err := approver("check that it can ask you before sending WhatsApp messages (nothing will be sent)"); err != nil {
 			w.WriteHeader(http.StatusForbidden)
 			json.NewEncoder(w).Encode(CommandResponse{Message: err.Error()})
 			return

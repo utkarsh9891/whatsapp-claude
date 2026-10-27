@@ -79,7 +79,7 @@ says "add_chat by name"                    "$(a auto "Field$rtl Ops")" 'the chat
 says "add_chat me"                         "$(a auto me)" 'your own "Message yourself" chat'
 
 # With the bridge's Touch ID helper installed the bridge approves sends (ADR 2026-10-27-17d63a)
-mkdir -p "$WA_HOME/app" && printf '#!/bin/sh\nexit 1\n' > "$WA_HOME/app/wa-approve" && chmod +x "$WA_HOME/app/wa-approve"
+mkdir -p "$WA_HOME/app" && printf '#!/bin/sh\nexit 1\n' > "$WA_HOME/app/WhatsApp for Claude" && chmod +x "$WA_HOME/app/WhatsApp for Claude"
 check "Touch ID bridge: send to group allowed" allow "$(p auto send_message 120363000@g.us)"
 check "Touch ID bridge: file to a person allowed" allow "$(p default send_file 911111)"
 says "Touch ID bridge: reason names the chat"  "$(p auto send_message 120363000@g.us)" 'Touch ID before sending to "Field Ops North"'

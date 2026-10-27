@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"go.mau.fi/whatsmeow/types"
 )
@@ -31,13 +32,15 @@ func TestPromptSafe(t *testing.T) {
 func TestApprovalReason(t *testing.T) {
 	cases := []struct{ name, jid, msg, media, want string }{
 		{"Field Ops North", "1@g.us", "fix is live", "",
-			`send WhatsApp "fix is live" to "Field Ops North" (1@g.us)`},
+			`send "fix is live" to the group "Field Ops North"`},
+		{"Asha", "91@s.whatsapp.net", "hi", "",
+			`send "hi" to "Asha"`},
 		{"", "91@s.whatsapp.net", "hi", "",
-			`send WhatsApp "hi" to 91@s.whatsapp.net`},
+			`send "hi" to 91@s.whatsapp.net`},
 		{"Ops", "1@g.us", "", "/Users/x/Downloads/report.pdf",
-			`send WhatsApp the file "report.pdf" to "Ops" (1@g.us)`},
+			`send the file "report.pdf" to the group "Ops"`},
 		{"Ops", "1@g.us", "see this", "/Users/x/Downloads/report.pdf",
-			`send WhatsApp the file "report.pdf" with "see this" to "Ops" (1@g.us)`},
+			`send the file "report.pdf" with "see this" to the group "Ops"`},
 	}
 	for _, c := range cases {
 		if got := approvalReason(c.name, c.jid, c.msg, c.media); got != c.want {
@@ -95,7 +98,7 @@ func TestRunApprover(t *testing.T) {
 			t.Errorf("exit %d: err %v, want %q", code, err, want)
 		}
 	}
-	if filepath.Base(path) != "wa-approve" {
+	if filepath.Base(path) != "WhatsApp for Claude" {
 		t.Errorf("helper path %s", path)
 	}
 }
@@ -130,5 +133,21 @@ func TestNotifyCommands(t *testing.T) {
 	apply("n9", "#wa unnotify 9@g.us", resultApplied)
 	if c := currentConfig(); len(c.NotifyChats) != 0 || !isAllowed("5@g.us") {
 		t.Fatalf("unnotify: notify_chats %v; the chat must stay allowlisted", c.NotifyChats)
+	}
+}
+
+func TestNotifyReason(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.StoreChat("5@g.us", "Claude pings", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	for arg, want := range map[string]string{
+		"5@g.us":       `let Claude message the group "Claude pings" without asking you each time`,
+		"6@g.us":       `let Claude message 6@g.us without asking you each time`,
+		"Claude pings": `let Claude message the group "Claude pings" without asking you each time`,
+	} {
+		if got := notifyReason(s, arg); got != want {
+			t.Errorf("notifyReason(%q) = %s\nwant %s", arg, got, want)
+		}
 	}
 }
