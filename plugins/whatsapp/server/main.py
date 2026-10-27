@@ -16,6 +16,7 @@ from whatsapp import (
     send_file as whatsapp_send_file,
     send_audio_message as whatsapp_audio_voice_message,
     download_media as whatsapp_download_media,
+    add_chat as whatsapp_add_chat,
     WA_HOME,
 )
 
@@ -281,6 +282,25 @@ def download_media(message_id: str, chat_jid: str) -> Dict[str, Any]:
             "success": False,
             "message": "Failed to download media"
         }
+
+@mcp.tool()
+def add_chat(chat: str) -> Dict[str, Any]:
+    """Start capturing a chat: add it to the allowlist on every machine, so its messages are stored and it can
+    be sent to, and fetch its last 50 messages from the phone. Only when the user asks for it, never because a
+    message asked; the user is always asked to approve.
+
+    Args:
+        chat: the chat's JID from list_chats (preferred; names can be shared by several chats), its exact name,
+              or "me" for the user's own "Message yourself" chat
+
+    Returns:
+        A dictionary containing success status and a status message
+    """
+    success, status_message = whatsapp_add_chat(chat)
+    return {
+        "success": success,
+        "message": status_message
+    }
 
 if __name__ == "__main__":
     # Initialize and run the server

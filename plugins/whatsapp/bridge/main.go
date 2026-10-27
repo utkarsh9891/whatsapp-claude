@@ -80,6 +80,13 @@ func NewMessageStore() (*MessageStore, error) {
 			PRIMARY KEY (id, chat_jid),
 			FOREIGN KEY (chat_jid) REFERENCES chats(jid)
 		);
+
+		CREATE TABLE IF NOT EXISTS chat_anchors (
+			jid TEXT PRIMARY KEY,
+			msg_id TEXT NOT NULL,
+			from_me BOOLEAN NOT NULL,
+			ts INTEGER NOT NULL
+		);
 	`)
 	if err != nil {
 		db.Close()
@@ -435,11 +442,6 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 	// #wa allowlist commands from the owner's own chat (ADR 2026-10-23-f28675)
 	handleSelfCommand(client, messageStore, msg.Info.Chat, msg.Info.Sender, msg.Info.IsFromMe, msg.Info.ID, extractTextContent(msg.Message), true)
 
-	// Only allowlisted chats get their content stored
-	if !isAllowed(chatJID) {
-		return
-	}
-
 	// Extract text content
 	content := extractTextContent(msg.Message)
 
@@ -448,6 +450,16 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 
 	// Skip if there's no content and no media
 	if content == "" && mediaType == "" {
+		return
+	}
+
+	// Every chat's latest message ID and time (no content), for history on add (ADR 2026-10-27-a8ea3b)
+	if err := messageStore.StoreAnchor(chatJID, msg.Info.ID, msg.Info.IsFromMe, msg.Info.Timestamp); err != nil {
+		logger.Warnf("Failed to store chat anchor: %v", err)
+	}
+
+	// Only allowlisted chats get their content stored
+	if !isAllowed(chatJID) {
 		return
 	}
 
@@ -471,6 +483,11 @@ func handleMessage(client *whatsmeow.Client, messageStore *MessageStore, msg *ev
 	// Message content is never logged: the log file would be a plaintext copy of every chat
 	if err != nil {
 		logger.Warnf("Failed to store message: %v", err)
+	}
+
+	// Added before any of its messages was known: fetch the history before this one
+	if takeHistoryWait(chatJID) {
+		requestChatHistory(client, chatJID, msg.Info.ID, msg.Info.IsFromMe, msg.Info.Timestamp)
 	}
 }
 
@@ -823,11 +840,15 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 			json.NewEncoder(w).Encode(CommandResponse{Message: fmt.Sprintf("Error sending command: %v", err)})
 			return
 		}
+		before := currentConfig().AllowChats
 		result, err := applySelfCommand(resp.ID, cmd, messageStore.lookupChatsByName, selfChatJIDs(client))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(CommandResponse{Message: err.Error()})
 			return
+		}
+		if cmd.Op == "add" {
+			requestHistoryForAdded(client, messageStore, before)
 		}
 		if emoji, ok := resultReaction[result]; ok {
 			client.SendMessage(context.Background(), self, client.BuildReaction(self, self, resp.ID, emoji))
@@ -1096,6 +1117,7 @@ func handleHistorySync(client *whatsmeow.Client, messageStore *MessageStore, his
 	fmt.Printf("Received history sync event with %d conversations\n", len(historySync.Data.Conversations))
 
 	syncedCount := 0
+	updateChats, applyCommands := historyRoles(historySync.Data.GetSyncType())
 	var commands []pendingCommand
 	ownPN, ownLID := ownJIDs(client)
 	for _, conversation := range historySync.Data.Conversations {
@@ -1133,10 +1155,13 @@ func handleHistorySync(client *whatsmeow.Client, messageStore *MessageStore, his
 				continue
 			}
 
-			messageStore.StoreChat(chatJID, name, timestamp)
+			if updateChats {
+				messageStore.StoreChat(chatJID, name, timestamp)
+				storeHistoryAnchor(messageStore, chatJID, messages)
+			}
 
 			// Collect #wa allowlist commands from the owner's own chat; applied after the sync, oldest first
-			if isSelfChat(jid, ownPN, ownLID) {
+			if applyCommands && isSelfChat(jid, ownPN, ownLID) {
 				for _, m := range messages {
 					if m == nil || m.Message == nil || m.Message.Key == nil || !m.Message.Key.GetFromMe() {
 						continue
@@ -1247,42 +1272,6 @@ func handleHistorySync(client *whatsmeow.Client, messageStore *MessageStore, his
 
 	applyHistoryCommands(client, messageStore, commands)
 	fmt.Printf("History sync complete. Stored %d messages.\n", syncedCount)
-}
-
-// Request history sync from the server
-func requestHistorySync(client *whatsmeow.Client) {
-	if client == nil {
-		fmt.Println("Client is not initialized. Cannot request history sync.")
-		return
-	}
-
-	if !client.IsConnected() {
-		fmt.Println("Client is not connected. Please ensure you are connected to WhatsApp first.")
-		return
-	}
-
-	if client.Store.ID == nil {
-		fmt.Println("Client is not logged in. Please scan the QR code first.")
-		return
-	}
-
-	// Build and send a history sync request
-	historyMsg := client.BuildHistorySyncRequest(nil, 100)
-	if historyMsg == nil {
-		fmt.Println("Failed to build history sync request.")
-		return
-	}
-
-	_, err := client.SendMessage(context.Background(), types.JID{
-		Server: "s.whatsapp.net",
-		User:   "status",
-	}, historyMsg)
-
-	if err != nil {
-		fmt.Printf("Failed to request history sync: %v\n", err)
-	} else {
-		fmt.Println("History sync requested. Waiting for server response...")
-	}
 }
 
 // analyzeOggOpus tries to extract duration and generate a simple waveform from an Ogg Opus file

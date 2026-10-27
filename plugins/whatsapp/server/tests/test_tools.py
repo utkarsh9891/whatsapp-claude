@@ -51,5 +51,31 @@ def test_read_tool_output_validates(mcp, name, args):
 
 def test_every_read_tool_is_covered(mcp):
     tools = {t.name for t in asyncio.run(mcp.list_tools())}
-    acting = {"send_message", "send_file", "send_audio_message", "download_media"}
+    acting = {"send_message", "send_file", "send_audio_message", "download_media", "add_chat"}
     assert tools - acting == {n for n, _ in CALLS}
+
+
+class _Resp:
+    def __init__(self, status, body):
+        self.status_code, self._body, self.text = status, body, str(body)
+
+    def json(self):
+        return self._body
+
+
+@pytest.mark.parametrize("bridge,ok", [
+    ((200, {"success": True, "result": "applied"}), True),
+    ((200, {"success": True, "result": "ambiguous"}), False),
+    ((503, {"message": "Not connected to WhatsApp"}), False),
+])
+def test_add_chat_posts_one_command(mcp, monkeypatch, bridge, ok):
+    wa = sys.modules["whatsapp"]
+    with open(os.path.join(wa.WA_HOME, "token"), "w") as f:
+        f.write("t0ken\n")
+    sent = []
+    monkeypatch.setattr(wa.requests, "post", lambda url, json, headers, timeout: sent.append((url, json, headers)) or _Resp(*bridge))
+    # a newline must not smuggle a second line into the self-chat command
+    _, structured = asyncio.run(mcp.call_tool("add_chat", {"chat": "Field Ops\nNorth"}))
+    assert sent == [(f"{wa.WHATSAPP_API_BASE_URL}/command", {"command": "add Field Ops North"},
+                     {"Authorization": "Bearer t0ken"})]
+    assert structured["result"]["success"] is ok

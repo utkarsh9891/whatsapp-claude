@@ -258,10 +258,15 @@ func handleSelfCommand(client *whatsmeow.Client, store *MessageStore, chat, send
 	}
 	result := resultInvalid
 	if perr == nil {
+		before := currentConfig().AllowChats
 		var err error
 		if result, err = applySelfCommand(msgID, cmd, store.lookupChatsByName, selfChatJIDs(client)); err != nil {
 			fmt.Printf("Failed to apply allowlist command: %v\n", err)
 			return true
+		}
+		// Replays from the pairing sync (not live) come with history already
+		if live && cmd.Op == "add" {
+			requestHistoryForAdded(client, store, before)
 		}
 	}
 	fmt.Printf("Allowlist command %s: %s\n", cmd.Op, result) // the argument is a chat name; keep it out of logs

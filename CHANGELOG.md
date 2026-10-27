@@ -2,6 +2,13 @@
 
 Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json`). Back to [AGENTS.md](./AGENTS.md).
 
+## 0.6.0 — 2026-10-27
+
+- **History on add:** adding a chat (phone, `wa-allow`, `add_chat`) fetches its last 50 messages from your phone
+  ([ADR a8ea3b](./docs/architecture/decisions/2026-10-27-a8ea3b-history-on-add-add-chat-and-named-prompts.md)).
+- **`add_chat`** in `wa`: "start watching <group>" adds a chat after you approve the prompt.
+- Send and `add_chat` prompts **name the chat** next to its JID.
+
 ## 0.5.0 — 2026-10-24
 
 - `wa` starts in **auto mode** (the guard now allows it); `wa --manual` for prompts on everything.

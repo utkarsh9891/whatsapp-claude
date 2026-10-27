@@ -11,7 +11,8 @@ guard hook blocks it.
 |---|---|
 | "What needs my attention in the last 12 hours?" | `digest` runs (no prompt); you get a summary by group |
 | "Show me the escalation in Field Ops North" | `list_messages` for that chat and window (no prompt) |
-| "Reply in Field Ops North that the fix is live" | the assistant drafts the text and names the chat; the send asks for your approval |
+| "Reply in Field Ops North that the fix is live" | the assistant drafts the text and names the chat; the send asks for your approval, naming the chat |
+| "Start watching Field Ops North" | `add_chat` asks for your approval, naming the chat; then its last 50 messages are fetched |
 | "Send that to myself" / "note this in my self-chat" | sent to your own chat without asking |
 | "Download the PDF I sent myself" | downloaded without a prompt to `~/.whatsapp-mcp/media/`; Claude can open it there |
 | "Send ~/Downloads/report.pdf to Field Ops North" | files from `~/Downloads`, `~/Desktop`, `~/Documents`, `~/Pictures` or the outbox; asks first unless it is to yourself |
@@ -38,5 +39,5 @@ WA_MODEL=opus wa        # any Claude model name or alias
 wa -p "what needs my attention in the last 12 hours?"
 ```
 
-It is read-only by design: read tools are pre-allowed, and sends need an approval a background run can't give,
-so they are refused.
+It is read-only by design, except for sends to yourself: read tools are pre-allowed, and sends to others and
+`add_chat` need an approval a background run can't give, so they are refused.

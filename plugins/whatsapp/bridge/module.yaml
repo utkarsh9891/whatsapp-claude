@@ -3,9 +3,9 @@ id: bridge
 type: service
 purpose: >
   Long-running WhatsApp linked device (whatsmeow). Stores every chat's name and activity time, and message
-  content only for allowlisted chats; serves a loopback-only, token-authenticated API for sends and media
+  content only for allowlisted chats (fetching a chat's last 50 messages from the phone when it is added); serves a loopback-only, token-authenticated API for sends and media
   downloads, refusing unlisted recipients and files outside the outbox. Hardened fork of lharries/whatsapp-mcp.
-  Decisions: ADR 2026-10-23-de419c, ADR 2026-10-23-e302a3, ADR 2026-10-23-f28675.
+  Decisions: ADR 2026-10-23-de419c, ADR 2026-10-23-e302a3, ADR 2026-10-23-f28675, ADR 2026-10-27-a8ea3b.
 consumes:
   - go.mau.fi/whatsmeow           # WhatsApp multi-device protocol
   - github.com/mattn/go-sqlite3   # message store (cgo)
@@ -19,7 +19,8 @@ interfaces:
   - "POST 127.0.0.1:<port>/api/download  {message_id, chat_jid}             Bearer token, application/json"
   - "POST 127.0.0.1:<port>/api/command   {command}                        Bearer token, application/json; posts #wa <command> to the self-chat"
   - "reads #wa commands sent by the owner in their own chat; applies them to config.json"
-  - "writes messages.db (chats, messages) read by server"
+  - "writes messages.db (chats, chat_anchors, messages) read by server"
+  - "asks the owner's phone for a chat's recent history when the chat is added by a live command"
 guard_files:
   - ./config.go
   - ./selfcmd.go

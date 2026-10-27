@@ -1,6 +1,6 @@
 # 2026-10-24-f10233 — Auto mode, free sends to yourself, and sending from everyday folders
 
-- **Status:** accepted
+- **Status:** amended by [2026-10-27-a8ea3b](./2026-10-27-a8ea3b-history-on-add-add-chat-and-named-prompts.md)
 - **Date:** 2026-10-24
 - **Deciders:** Utkarsh Upadhyay
 - **Scope:** plugin

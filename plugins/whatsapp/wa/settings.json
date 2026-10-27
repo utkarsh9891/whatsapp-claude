@@ -13,6 +13,9 @@
       "mcp__whatsapp__get_last_interaction",
       "mcp__whatsapp__search_contacts",
       "Read(~/.whatsapp-mcp/media/**)"
+    ],
+    "ask": [
+      "mcp__whatsapp__add_chat"
     ]
   }
 }

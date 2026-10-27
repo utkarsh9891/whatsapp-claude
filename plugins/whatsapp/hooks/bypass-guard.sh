@@ -1,10 +1,11 @@
 #!/bin/bash
-# Guard for WhatsApp MCP tools (ADR 2026-10-23-8f4095, amended by 2026-10-24-f10233).
+# Guard for WhatsApp MCP tools (ADR 2026-10-23-8f4095, amended by 2026-10-24-f10233 and 2026-10-27-a8ea3b).
 # Incoming messages are untrusted text, so the tools only run in permission modes
 # where Claude still checks actions: manual (default), acceptEdits, plan, auto.
 # Bypass, dontAsk and unknown modes are blocked; malformed input fails closed.
 # Sends are decided here by recipient: to the owner's own chat, allowed; to anyone
-# else, the user is asked. Downloads are allowed.
+# else, the user is asked. Downloads are allowed. Adding a chat always asks.
+# Prompts name the chat from the bridge's store next to its JID.
 WA_HOME="${WA_HOME:-$HOME/.whatsapp-mcp}"
 input=$(cat)
 
@@ -40,12 +41,40 @@ is_self() {
   return 1
 }
 
+# clean makes untrusted text safe to show in a prompt: no control or text-direction
+# characters, at most 80 characters. Chat names are chosen by chat members.
+clean='def clean: explode | map(select(. >= 32 and (. < 127 or . > 159)
+  and ((. >= 8206 and . <= 8207) or (. >= 8234 and . <= 8238) or (. >= 8294 and . <= 8297) | not)))
+  | implode | .[:80];'
+
+# chat_label names a recipient (phone number or JID): "Name" (jid) from the bridge's
+# store, or the JID alone. Anything outside JID characters is never looked up.
+chat_label() {
+  local r="$1" user server name
+  [[ "$r" =~ ^[0-9A-Za-z@.:_-]+$ ]] || { echo "an unreadable recipient"; return; }
+  if [[ "$r" == *@* ]]; then user=${r%%@*}; server=${r#*@}; else user=$r; server=s.whatsapp.net; fi
+  user=${user%%:*}
+  name=$(sqlite3 -json "file:$WA_HOME/messages.db?mode=ro" \
+    "SELECT name FROM chats WHERE jid = '$user@$server' LIMIT 1" 2>/dev/null |
+    jq -r "$clean"' .[0].name // "" | clean' 2>/dev/null)
+  if [ -n "$name" ]; then echo "\"$name\" ($user@$server)"; else echo "$user@$server (a chat this machine hasn't seen)"; fi
+}
+
 tool=$(jq -r '.tool_name // ""' <<<"$input")
 case "$tool" in
   *__send_message|*__send_file|*__send_audio_message)
     recipient=$(jq -r '.tool_input.recipient // ""' <<<"$input")
     is_self "$recipient" && decide allow "Sending to your own chat"
-    decide ask "WhatsApp: send to ${recipient}? Check the chat and the text."
+    decide ask "WhatsApp: send to $(chat_label "$recipient")? Check the chat and the text."
+    ;;
+  *__add_chat)
+    chat=$(jq -r "$clean"' .tool_input.chat // "" | clean' <<<"$input")
+    case "$chat" in
+      *@*) label=$(chat_label "$chat") ;;
+      me|myself|self) label="your own \"Message yourself\" chat" ;;
+      *) label="the chat named \"$chat\"" ;;
+    esac
+    decide ask "WhatsApp: start capturing ${label}? Its messages will be stored on every machine and it can be sent to."
     ;;
   *__download_media)
     decide allow "Download into ~/.whatsapp-mcp/media"
