@@ -53,7 +53,10 @@ as `! wa-send …`:
 wa-send "Claude pings" "build finished"         # notification chat: no prompt
 wa-send "Field Ops North" "fix is live"         # Touch ID first
 wa-send me --file ~/Downloads/report.pdf        # your own chat: no prompt
+wa-send Panda "on my way"                       # part of a name, or a number: one match is used and named
 ```
+
+Chats are found by name, number or part of a name: [finding a chat](./allowlist.md#finding-a-chat).
 
 The Touch ID prompt takes Touch ID only (no password), and waits two minutes. With the lid closed, sends to
 others fail; notification chats and your own chat still work.
