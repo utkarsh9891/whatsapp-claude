@@ -10,7 +10,7 @@ Decision: [ADR 2026-10-23-8f4095](../../docs/architecture/decisions/2026-10-23-8
 | [`bin/wa`](./bin/wa) | launches the WhatsApp-only Claude session ([guide](../../docs/guides/claude-code.md)) |
 | [`bin/wa-allow`](./bin/wa-allow) | allowlist CLI, incl. notification chats ([guide](../../docs/guides/allowlist.md)) |
 | [`bin/wa-send`](./bin/wa-send) | send from any terminal through the bridge's checks, or arm a pattern to send later unattended ([guide](../../docs/guides/claude-code.md#sending-from-any-terminal)) |
-| `bin/walookup.py` | finds a chat by name, number or part of a name, for `wa-send` and `wa-allow` ([guide](../../docs/guides/allowlist.md#finding-a-chat)) |
+| [`bin/walookup.py`](./bin/walookup.py) | finds a chat by name, number or part of a name, for `wa-send` and `wa-allow` ([guide](../../docs/guides/allowlist.md#finding-a-chat)) |
 | [`approve/wa-approve.swift`](./approve/wa-approve.swift) | the Touch ID helper, installed as **WhatsApp for Claude**, that the bridge runs before a send to others ([ADR 17d63a](../../docs/architecture/decisions/2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)) |
 | [`bin/install.sh`](./bin/install.sh) | `install`, `pair [phone]`, `service`, `status`, `approve-test`, `uninstall` ([runbook](../../docs/operations/runbook.md)) |
 | [`commands/wa-setup.md`](./commands/wa-setup.md) | `/wa-setup [phone]`: install, pair and start the service from Claude Code |

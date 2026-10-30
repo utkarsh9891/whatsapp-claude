@@ -22,9 +22,10 @@ named the person by an ID nobody recognises, which weakens T5 (wrong recipient).
 2. **The CLIs resolve a chat by name, number or part of a name**, in one shared lookup (`bin/walookup.py`):
    - a JID or `me` as before;
    - a number with at least 7 digits, with or without country code, finds that person's chats;
-   - a name matches chat names and contact names (saved, business, self-chosen), ignoring case: an **exact**
-     match wins; otherwise a **word-prefix** match, every word typed starting a word of the name ("Panda" and
-     "pan po" find "Panda Po").
+   - a name matches chat names and contact names (saved, business, self-chosen), ignoring case, in tiers, the
+     first tier with a match deciding: an **exact** name; names containing every word typed as a **whole
+     word** ("Panda" finds "Panda Po", not "Pandawa"); names where every word typed **starts** a word
+     ("pan po" finds "Panda Po").
    - A person's phone and LID chats count as one; the one with the latest message is used.
    - **One match is used** and the CLI prints which chat it chose; **several are listed** with numbers and
      nothing is done; none is an error.
@@ -49,6 +50,7 @@ named the person by an ID nobody recognises, which weakens T5 (wrong recipient).
 - The CLIs read the contact and LID tables in `whatsapp.db` (read-only), as `wa-send` already read the device row.
 
 ## Alternatives considered
+- **One prefix tier, no whole-word tier:** rejected; "Panda" would tie "Panda Po" with "Pandawa" and do nothing.
 - **Substring matching:** rejected; "an" would match most chats, and prefix matching covers how people shorten
   names.
 - **Use the first of several matches:** rejected; the wrong person may get the message (T5).

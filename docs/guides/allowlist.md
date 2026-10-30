@@ -57,7 +57,8 @@ machine matches, `add` posts the name instead and it waits as a pending name.
 | You type | Finds |
 |---|---|
 | `"Panda Po"`, `"panda po"` | a chat or contact with exactly that name (saved, business or self-chosen), ignoring case |
-| `Panda`, `"pan po"` | otherwise, names where every word you type starts a word of the name |
+| `Panda`, `"po panda"` | otherwise, names containing every word you type as a whole word ("Panda" finds "Panda Po", not "Pandawa") |
+| `pan`, `"pan po"` | otherwise, names where every word you type starts a word of the name |
 | `9812345670`, `+91 98123 45670` | that number's chats (7+ digits, country code optional) |
 | `120363…@g.us`, `…@lid`, `me` | that chat, or your own |
 
