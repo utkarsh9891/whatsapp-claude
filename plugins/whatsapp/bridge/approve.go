@@ -160,13 +160,15 @@ func notifyMembersOK(chat types.JID, members []types.GroupParticipant, ownPN, ow
 }
 
 // sendApproval decides whether a send may go out: to the owner's own chat, yes; to a
-// notification chat that can only reach the owner, yes; anything else waits for Touch ID.
-// asked reports that the owner approved it with Touch ID. adding says the chat isn't
+// notification chat that can only reach the owner, yes; text that fits a pattern the owner
+// armed for the chat, yes (ADR 2026-10-30-032c66); anything else waits for Touch ID.
+// asked reports that the owner approved it with Touch ID, now or when arming; release, when
+// not nil, gives an armed use back if the send then fails. adding says the chat isn't
 // allowlisted yet, which the prompt mentions.
-func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID, message, mediaPath string, adding bool) (asked bool, err error) {
+func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID, message, mediaPath string, adding bool) (asked bool, release func(), err error) {
 	ownPN, ownLID := ownJIDs(client)
 	if isSelfChat(chat, ownPN, ownLID) {
-		return false, nil
+		return false, nil, nil
 	}
 	if isNotifyChat(chat.String()) {
 		info, err := client.GetGroupInfo(context.Background(), chat)
@@ -174,14 +176,27 @@ func sendApproval(client *whatsmeow.Client, store *MessageStore, chat types.JID,
 			err = notifyMembersOK(chat, info.Participants, ownPN, ownLID)
 		}
 		if err == nil {
-			return false, nil
+			return false, nil, nil
 		}
 		fmt.Printf("Notification chat not usable unattended (%v); asking for Touch ID\n", err)
 	}
-	if err := approver(approvalReason(store.chatName(chat.String()), chat.String(), message, mediaPath, adding)); err != nil {
-		return false, err
+	forChat := false
+	if mediaPath == "" {
+		if release, forChat = useArmed(chat.ToNonAD().String(), message); release != nil {
+			fmt.Println("Sending with an armed pattern; no prompt")
+			return true, release, nil
+		}
+		if forChat {
+			fmt.Println("Armed for this chat, but the text doesn't fit; asking for Touch ID")
+		}
 	}
-	return true, nil
+	if err := approver(approvalReason(store.chatName(chat.String()), chat.String(), message, mediaPath, adding)); err != nil {
+		if forChat {
+			err = fmt.Errorf("%w (the text doesn't fit what you armed for this chat)", err)
+		}
+		return false, nil, err
+	}
+	return true, nil, nil
 }
 
 // syncAddedChat tells the owner's other machines to add jid, by posting "#wa add <jid>" to

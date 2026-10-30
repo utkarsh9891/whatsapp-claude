@@ -214,31 +214,16 @@ func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipien
 		return false, "Not connected to WhatsApp"
 	}
 
-	// Create JID for recipient
-	var recipientJID types.JID
-	var err error
-
-	// Check if recipient is a JID
-	isJID := strings.Contains(recipient, "@")
-
-	if isJID {
-		// Parse the JID string
-		recipientJID, err = types.ParseJID(recipient)
-		if err != nil {
-			return false, fmt.Sprintf("Error parsing JID: %v", err)
-		}
-	} else {
-		// Create JID from phone number
-		recipientJID = types.JID{
-			User:   recipient,
-			Server: "s.whatsapp.net", // For personal chats
-		}
+	// A JID, or a phone number for a personal chat
+	recipientJID, err := parseRecipient(recipient)
+	if err != nil {
+		return false, err.Error()
 	}
 
 	// Anyone but the owner (or a notification chat) needs the owner's Touch ID (ADR 2026-10-27-17d63a);
 	// a chat not on the allowlist may be sent to that way and is added once sent (ADR 2026-10-27-16abb6)
 	listed := isAllowed(recipientJID.String())
-	asked, err := sendApproval(client, store, recipientJID, message, mediaPath, !listed)
+	asked, release, err := sendApproval(client, store, recipientJID, message, mediaPath, !listed)
 	if err != nil {
 		return false, err.Error()
 	}
@@ -385,6 +370,9 @@ func sendWhatsAppMessage(client *whatsmeow.Client, store *MessageStore, recipien
 	_, err = client.SendMessage(context.Background(), recipientJID, msg)
 
 	if err != nil {
+		if release != nil {
+			release()
+		}
 		return false, fmt.Sprintf("Error sending message: %v", err)
 	}
 
@@ -887,6 +875,9 @@ func startRESTServer(client *whatsmeow.Client, messageStore *MessageStore, port 
 		}
 		json.NewEncoder(w).Encode(CommandResponse{Success: true, Result: result, Message: "posted to " + where + "; other machines apply it as they receive it"})
 	}))
+
+	// Patterns the owner approves ahead of time (ADR 2026-10-30-032c66)
+	registerArmHandlers(client, messageStore, token)
 
 	// Shows one Touch ID prompt and reports the result; nothing is sent (install.sh approve-test)
 	http.HandleFunc("/api/approve-test", requireAuth(token, func(w http.ResponseWriter, r *http.Request) {
