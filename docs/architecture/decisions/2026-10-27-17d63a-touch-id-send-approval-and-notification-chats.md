@@ -1,6 +1,6 @@
 # 2026-10-27-17d63a — The bridge asks for Touch ID before sending to others; notification chats send unattended
 
-- **Status:** amended by [2026-10-27-16abb6](./2026-10-27-16abb6-touch-id-send-adds-the-chat.md)
+- **Status:** amended by [2026-10-27-16abb6](./2026-10-27-16abb6-touch-id-send-adds-the-chat.md), [2026-10-30-032c66](./2026-10-30-032c66-armed-sends-approve-a-pattern-ahead.md)
 - **Date:** 2026-10-27
 - **Deciders:** Utkarsh Upadhyay
 - **Scope:** bridge
