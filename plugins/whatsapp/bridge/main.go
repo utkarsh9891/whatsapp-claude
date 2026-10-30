@@ -975,6 +975,14 @@ func main() {
 
 		case *events.Connected:
 			logger.Infof("Connected to WhatsApp")
+			go func() {
+				n, err := refreshChatNames(messageStore, func(j types.JID) string { return contactName(client, j) })
+				if err != nil {
+					fmt.Printf("Naming chats from contacts failed: %v\n", err)
+				} else if n > 0 {
+					fmt.Printf("Named %d chats from contacts\n", n)
+				}
+			}()
 
 		case *events.LoggedOut:
 			logger.Warnf("Device logged out, please scan QR code to log in again")
@@ -1073,8 +1081,8 @@ func GetChatName(client *whatsmeow.Client, messageStore *MessageStore, jid types
 	// First, check if chat already exists in database with a name
 	var existingName string
 	err := messageStore.db.QueryRow("SELECT name FROM chats WHERE jid = ?", chatJID).Scan(&existingName)
-	if err == nil && existingName != "" {
-		// Chat exists with a name, use that
+	if err == nil && existingName != "" && (jid.Server == types.GroupServer || !needsName(existingName)) {
+		// Chat exists with a name, use that (a 1:1 chat named by digits or "~" may get a better one)
 		return existingName
 	}
 
@@ -1132,15 +1140,15 @@ func GetChatName(client *whatsmeow.Client, messageStore *MessageStore, jid types
 		// This is an individual contact
 		logger.Infof("Getting name for contact: %s", chatJID)
 
-		// Just use contact info (full name)
-		contact, err := client.Store.Contacts.GetContact(context.Background(), jid)
-		if err == nil && contact.FullName != "" {
-			name = contact.FullName
-		} else if sender != "" {
-			// Fallback to sender
+		// Contacts on both addresses (ADR 2026-10-30-7e2c9d), else what we had, else the number
+		name = contactName(client, jid)
+		switch {
+		case name != "":
+		case existingName != "":
+			name = existingName
+		case sender != "":
 			name = sender
-		} else {
-			// Last fallback to JID
+		default:
 			name = jid.User
 		}
 
