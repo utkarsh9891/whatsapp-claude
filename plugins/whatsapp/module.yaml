@@ -3,7 +3,7 @@ id: plugin
 type: plugin            # plugin | service | mcp-server
 purpose: >
   Claude Code plugin that packages WhatsApp access behind a dedicated session: the bypass guard hook
-  (PreToolUse, every session), /wa-setup, the whatsapp-triage skill, the wa, wa-allow and wa-send launchers, the
+  (PreToolUse, every session), /wa-setup, the whatsapp-triage skill, the wa, wa-allow and wa-send launchers (with walookup.py: chats by name, number or prefix), the
   Touch ID helper (WhatsApp for Claude), and install.sh (build, pair, launchd service). Decisions: ADR 2026-10-23-8f4095, ADR 2026-10-23-3d143d.
 consumes:
   - bridge              # built and run by bin/install.sh

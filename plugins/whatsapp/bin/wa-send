@@ -12,7 +12,9 @@
   wa-send --armed                         list armed patterns
   wa-send --disarm [<chat>|<id>]          drop armed patterns (all with no argument)
 
-<chat> is a JID, "me" (your own chat), or a chat's exact name (any case). The bridge decides:
+<chat> is a JID, "me" (your own chat), a number (7+ digits, country code optional), or a chat or
+contact name: an exact name (any case), else every word typed starting a word of the name ("Panda"
+finds "Panda Po"). One match is used and named; several are listed and nothing is sent. The bridge decides:
 your own chat and notification chats send straight away; anyone else waits for your Touch ID,
 unless the text fits a pattern you armed for that chat. A chat not on the allowlist is added once
 you approve a send to it. ADRs 2026-10-27-17d63a, 16abb6, 2026-10-30-032c66.
@@ -25,38 +27,11 @@ at most 24h); --times defaults to 1 (at most 20). Files always ask. A bridge res
 import json
 import os
 import re
-import sqlite3
 import sys
 import urllib.error
 import urllib.request
 
-HOME = os.environ.get("WA_HOME") or os.path.expanduser("~/.whatsapp-mcp")
-
-
-def ro(db):
-    path = os.path.join(HOME, db)
-    if not os.path.exists(path):
-        sys.exit("No WhatsApp store: is the bridge paired and running? (install.sh status)")
-    return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
-
-
-def resolve(chat):
-    """A JID for chat: as given, the owner's own chat for "me", or the one chat with that exact name."""
-    if "@" in chat and " " not in chat:
-        return chat
-    if chat.lower() in ("me", "myself", "self"):
-        row = ro("whatsapp.db").execute("SELECT jid FROM whatsmeow_device LIMIT 1").fetchone()
-        if not row:
-            sys.exit("Not paired: install.sh pair")
-        return row[0].split("@")[0].split(":")[0] + "@s.whatsapp.net"
-    want = " ".join(chat.split()).lower()
-    rows = [(j, n) for j, n in ro("messages.db").execute("SELECT jid, COALESCE(name, '') FROM chats")
-            if " ".join(n.split()).lower() == want]
-    if len(rows) == 1:
-        return rows[0][0]
-    if not rows:
-        sys.exit(f"No chat named {chat!r} on this machine (wa-allow list <part of the name>)")
-    sys.exit(f"Several chats are named {chat!r}; pass the JID:\n" + "\n".join(f"  {j}" for j, _ in rows))
+from walookup import HOME, resolve
 
 
 def call(path, payload):
@@ -110,7 +85,7 @@ def arm(args):
     if not pattern:
         sys.exit("Nothing to arm: give a pattern")
     jid = resolve(chat)
-    print("Touch ID: approve the pattern on screen", file=sys.stderr)
+    print("A Touch ID prompt will show the pattern (unless the bridge refuses it first)", file=sys.stderr)
     finish(call("/api/arm", {"recipient": jid, "pattern": pattern, **opts}), f"{jid}: ")
 
 

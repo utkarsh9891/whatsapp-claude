@@ -38,7 +38,8 @@ that.
 
 - **Using it**
   - [Claude Code guide](./docs/guides/claude-code.md) — the `wa` session, what it allows and asks
-  - [Allowlist guide](./docs/guides/allowlist.md) — choosing which chats are captured and which can be replied to
+  - [Allowlist guide](./docs/guides/allowlist.md) — choosing which chats are captured and which can be replied to,
+    and [finding a chat](./docs/guides/allowlist.md#finding-a-chat) by name, number or part of a name
 - **Operating it** — [Runbook](./docs/operations/runbook.md): install, pair, re-pair, service, logs,
   several machines, uninstall, troubleshooting
 - **Governance**
@@ -55,4 +56,6 @@ that.
 | Add or change an MCP tool | [server module.yaml](./plugins/whatsapp/server/module.yaml), then the [triage skill](./plugins/whatsapp/skills/whatsapp-triage/SKILL.md) |
 | Touch a guard file (`hooks/`, `wa/settings.json`, `bin/wa`, `bridge/config.go`, `bridge/selfcmd.go`, `bridge/approve.go`, `bridge/armed.go`, `approve/`, `bin/install.sh`) | [security model](./docs/architecture/security-model.md) and [principle: never weaken a guard](./agent/principles/never-weaken-a-guard.mdc) |
 | Make a design choice someone could later want to reverse | write an ADR first: [decisions](./docs/architecture/decisions/README.md) |
+| Change how a chat is found by name or number (`wa-send`, `wa-allow`) | [`bin/walookup.py`](./plugins/whatsapp/bin/walookup.py), [ADR 7e2c9d](./docs/architecture/decisions/2026-10-30-7e2c9d-chat-discovery-contact-names-and-partial-match.md), [finding a chat](./docs/guides/allowlist.md#finding-a-chat) |
+| Change armed sends (approve a pattern ahead) | [`bridge/armed.go`](./plugins/whatsapp/bridge/armed.go), [ADR 032c66](./docs/architecture/decisions/2026-10-30-032c66-armed-sends-approve-a-pattern-ahead.md) |
 | Fix a machine that stopped receiving messages | [runbook § troubleshooting](./docs/operations/runbook.md#troubleshooting) |

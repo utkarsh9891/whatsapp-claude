@@ -25,13 +25,15 @@ flowchart LR
 
 ## Data flow
 
-1. **Inbound.** WhatsApp delivers every message to every linked device. The bridge records each chat's name and
+1. **Inbound.** WhatsApp delivers every message to every linked device. The bridge records each chat's name (1:1
+   chats from your contacts on both the phone and LID address, [ADR 7e2c9d](./decisions/2026-10-30-7e2c9d-chat-discovery-contact-names-and-partial-match.md)) and
    last-activity time for **all** chats, and stores message content **only for allowlisted chats**
    ([allowlist guide](../guides/allowlist.md)).
 2. **Reading.** The MCP server opens `messages.db` read-only and answers tool calls. `digest` returns counts and
    short snippets (mentions of you, keyword hits) instead of raw history, so a catch-up across many groups
    stays small.
-3. **Sending.** `send_message` / `send_file` (or `wa-send`) call the bridge's local API. The bridge refuses any
+3. **Sending.** `send_message` / `send_file` (or `wa-send`, which finds the chat by name, number or part of a name
+   with `bin/walookup.py`) call the bridge's local API. The bridge refuses any
    recipient not on the allowlist and any file outside the `send_from` folders, and asks for your Touch ID
    before sending to anyone but you or a notification chat (the `WhatsApp for Claude` helper), unless the text
    fits a pattern you armed for that chat with Touch ID beforehand.
@@ -60,7 +62,7 @@ plugins/whatsapp/                 the plugin module (module.yaml)
   bridge/                         Go module (module.yaml)
   server/                         Python MCP server (module.yaml)
   hooks/                          bypass guard + its test
-  bin/                            install.sh, wa, wa-allow, wa-send
+  bin/                            install.sh, wa, wa-allow, wa-send, walookup.py (chat lookup)
   approve/                        wa-approve.swift, the Touch ID helper (installed as "WhatsApp for Claude")
   wa/settings.json                permissions for the wa session
   commands/, skills/              /wa-setup, whatsapp-triage

@@ -10,6 +10,8 @@ Decisions: [fork](../../../docs/architecture/decisions/2026-10-23-de419c-fork-an
 | `config.go` | **guard file:** data dir, allowlist (`config.json`, re-read on change), bearer token, auth middleware, `safeName`, `sendablePath` (`send_from` folders), QR PNG |
 | `selfcmd.go` | **guard file:** `#wa` allowlist commands from the owner in the self-chat or a notification chat ([ADR fc6f0e](../../../docs/architecture/decisions/2026-10-27-fc6f0e-commands-through-notification-chats.md)): parse, resolve names, apply once, react ([ADR f28675](../../../docs/architecture/decisions/2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md)) |
 | `approve.go` | **guard file:** Touch ID approval before sends to others, notification-chat membership check, prompt text ([ADR 17d63a](../../../docs/architecture/decisions/2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)) |
+| `names.go` | names 1:1 chats from contacts on both the phone and LID address, self-chosen names marked `~`, and renames digit-named chats ([ADR 7e2c9d](../../../docs/architecture/decisions/2026-10-30-7e2c9d-chat-discovery-contact-names-and-partial-match.md)) |
+| `names_test.go` | tests for `names.go` |
 | `armed.go` | **guard file:** armed sends: pattern slots, the arming prompt, in-memory patterns and their use ([ADR 032c66](../../../docs/architecture/decisions/2026-10-30-032c66-armed-sends-approve-a-pattern-ahead.md)) |
 | `armed_test.go` | tests for `armed.go` |
 | `approve_test.go` | tests for `approve.go` and the `notify` commands |

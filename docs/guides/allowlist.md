@@ -37,14 +37,35 @@ you first and names the chat; it then works like `#wa add`. Not available in `wa
 
 ```bash
 wa-allow list                    # every chat seen; * allowlisted, ⏳ pending names
-wa-allow list ops                # filter by name or JID
-wa-allow add "Field Ops North"   # posts "#wa add Field Ops North" to your notification chat → every machine
+wa-allow list ops                # filter: chat or contact name (word prefix), number, or JID
+wa-allow add "Field Ops North"   # posts "#wa add <its JID>" to your notification chat → every machine
 wa-allow remove "Field Ops North"
 wa-allow direct on
 wa-allow notify "Claude pings"     # asks for Touch ID on this machine
 ```
 
+Chats are found by name, number or part of a name ([finding a chat](#finding-a-chat)). If nothing on this
+machine matches, `add` posts the name instead and it waits as a pending name.
+
 `wa-allow add/remove/direct` need the bridge running (`install.sh status`), because they send through it.
+
+## Finding a chat
+
+`wa-send`, `wa-allow list` and `wa-allow add/remove/notify` take any of
+([ADR 7e2c9d](../architecture/decisions/2026-10-30-7e2c9d-chat-discovery-contact-names-and-partial-match.md)):
+
+| You type | Finds |
+|---|---|
+| `"Panda Po"`, `"panda po"` | a chat or contact with exactly that name (saved, business or self-chosen), ignoring case |
+| `Panda`, `"po panda"` | otherwise, names containing every word you type as a whole word ("Panda" finds "Panda Po", not "Pandawa") |
+| `pan`, `"pan po"` | otherwise, names where every word you type starts a word of the name |
+| `9812345670`, `+91 98123 45670` | that number's chats (7+ digits, country code optional) |
+| `120363…@g.us`, `…@lid`, `me` | that chat, or your own |
+
+A person's phone-number and LID chats are one match, and the one with the latest message is used. One match is
+used and named (`→ Panda Po (+91…) …@lid`); several are listed with their numbers and nothing is done. 1:1 chats
+are named from your contacts: your saved name, else a business name, else the name the person chose, shown
+`~Like this`.
 
 ## Notification chats
 

@@ -2,6 +2,17 @@
 
 Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json`). Back to [AGENTS.md](./AGENTS.md).
 
+## 0.10.0 — 2026-10-30
+
+- **Find chats by contact name, number or part of a name:** `wa-send` and `wa-allow` take a saved contact's name,
+  a number (country code optional) or part of a name ("Panda" finds "Panda Po"); one match is used and named,
+  several are listed and nothing is done
+  ([ADR 7e2c9d](./docs/architecture/decisions/2026-10-30-7e2c9d-chat-discovery-contact-names-and-partial-match.md)).
+- **1:1 chats get real names:** chats WhatsApp addresses by LID now take the contact saved under the phone number
+  (and the reverse), so `wa`, `wa-allow list` and the Touch ID prompt show "Asha", not digits; a name the person
+  chose is shown `~Like this`. Existing digit-named chats are renamed when the bridge connects.
+- `wa-send --arm` no longer says a Touch ID prompt is coming when the bridge refuses first.
+
 ## 0.9.0 — 2026-10-30
 
 - **Armed sends:** `wa-send --arm <chat> [--for 2h] [--times N] "<pattern>"` asks for your Touch ID now, showing

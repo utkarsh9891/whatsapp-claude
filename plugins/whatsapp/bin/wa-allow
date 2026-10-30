@@ -5,9 +5,10 @@
 """Manage the WhatsApp chat allowlist, shared by every machine through your notification chat
 (or your self-chat if you have none).
 
-  wa-allow list [search]       chats this machine has seen; * allowlisted, ⏳ pending names
-  wa-allow add <name|jid>      allowlist a chat (exact name, any case, or JID)
-  wa-allow remove <name|jid>   stop capturing and sending to a chat
+  wa-allow list [search]       chats this machine has seen, latest first; * allowlisted, ⏳ pending
+                               names. search: part of a chat or contact name, a number, or a JID
+  wa-allow add <chat>          allowlist a chat (name, part of a name, number or JID)
+  wa-allow remove <chat>       stop capturing and sending to a chat
   wa-allow direct on|off       allowlist all 1:1 chats
   wa-allow notify <name|jid>   make a group a notification chat: Claude's messages to it send without
                                asking while only you (and at most one other account) are in it; asks
@@ -17,15 +18,19 @@
 add/remove/direct/notify post "#wa <command>" through the local bridge to your
 notification chat (else your "Message yourself" chat), so every linked machine
 applies it. The same commands can be typed in either chat on your phone. Adding a chat fetches its last 50 messages from your phone.
+
+<chat> is found as in wa-send: an exact name wins, else every word typed starts a word of the name;
+one match is posted as its JID, several are listed and nothing is done, none posts the name as typed
+(it waits as a pending name until a chat with it appears). ADR 2026-10-30-7e2c9d.
 """
 import json
 import os
-import sqlite3
 import sys
 import urllib.error
 import urllib.request
 
-HOME = os.environ.get("WA_HOME") or os.path.expanduser("~/.whatsapp-mcp")
+from walookup import HOME, find, people, resolve
+
 CONFIG = os.path.join(HOME, "config.json")
 
 
@@ -70,17 +75,15 @@ def command(text):
 
 
 def chats(search=""):
-    db = os.path.join(HOME, "messages.db")
-    if not os.path.exists(db):
+    """People with chats (all, or those search finds, contacts without a chat included), latest first."""
+    if not os.path.exists(os.path.join(HOME, "messages.db")):
         sys.exit("No chats yet: is the bridge paired and running? (install.sh status)")
-    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    rows = conn.execute(
-        "SELECT jid, COALESCE(name, ''), COALESCE(last_message_time, '') FROM chats "
-        "WHERE jid LIKE ? OR name LIKE ? ORDER BY last_message_time DESC",
-        (f"%{search}%", f"%{search}%"),
-    ).fetchall()
-    conn.close()
-    return rows
+    everyone = people()
+    if not search:
+        return sorted((p for p in everyone if p.chats), key=lambda p: p.last, reverse=True)
+    if "@" in search:
+        return [p for p in everyone if any(search in jid for _, jid in p.chats) or search in p.key]
+    return find(search, everyone, broad=True)
 
 
 def main(argv):
@@ -91,14 +94,16 @@ def main(argv):
     cfg = load()
     allowed = set(cfg.get("allow_chats", []))
     if cmd == "list":
-        for jid, name, last in chats(" ".join(args)):
-            print(f"{'*' if jid in allowed else ' '} {last[:16]:16}  {name[:40]:40}  {jid}")
+        for p in chats(" ".join(args)):
+            mark = "*" if any(jid in allowed for _, jid in p.chats) else " "
+            print(f"{mark} {p.last[:16] or '-':16}  {p.label[:48]:48}  {p.jid}")
         for jid in cfg.get("notify_chats", []):
             print(f"🔔 notification chat: {jid}")
         for name in cfg.get("allow_names", []):
             print(f"⏳ pending name: {name}")
     elif cmd in ("add", "remove", "notify", "unnotify") and args:
-        command(f"{cmd} {' '.join(args)}")
+        target = " ".join(args)
+        command(f"{cmd} {resolve(target, missing_ok=True) or target}")
     elif cmd == "direct" and args and args[0] in ("on", "off"):
         command(f"direct {args[0]}")
     else:

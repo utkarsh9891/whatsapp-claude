@@ -43,7 +43,7 @@ do_install() {
   cp -R "$PLUGIN_ROOT/server" "$APP.new/server"
   rm -rf "$APP.new/server/.venv" "$APP.new/server/tests"
   (cd "$APP.new/server" && uv sync --quiet --no-dev)
-  cp "$PLUGIN_ROOT/bin/wa" "$PLUGIN_ROOT/bin/wa-allow" "$PLUGIN_ROOT/bin/wa-send" "$APP.new/"
+  cp "$PLUGIN_ROOT/bin/wa" "$PLUGIN_ROOT/bin/wa-allow" "$PLUGIN_ROOT/bin/wa-send" "$PLUGIN_ROOT/bin/walookup.py" "$APP.new/"
   # stop the bridge before swapping the binary it runs from
   $was_running && stop_service
   rm -rf "$APP" && mv "$APP.new" "$APP"
