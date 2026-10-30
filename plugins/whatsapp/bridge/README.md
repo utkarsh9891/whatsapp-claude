@@ -10,6 +10,8 @@ Decisions: [fork](../../../docs/architecture/decisions/2026-10-23-de419c-fork-an
 | `config.go` | **guard file:** data dir, allowlist (`config.json`, re-read on change), bearer token, auth middleware, `safeName`, `sendablePath` (`send_from` folders), QR PNG |
 | `selfcmd.go` | **guard file:** `#wa` allowlist commands from the owner in the self-chat or a notification chat ([ADR fc6f0e](../../../docs/architecture/decisions/2026-10-27-fc6f0e-commands-through-notification-chats.md)): parse, resolve names, apply once, react ([ADR f28675](../../../docs/architecture/decisions/2026-10-23-f28675-allowlist-carried-in-whatsapp-self-chat.md)) |
 | `approve.go` | **guard file:** Touch ID approval before sends to others, notification-chat membership check, prompt text ([ADR 17d63a](../../../docs/architecture/decisions/2026-10-27-17d63a-touch-id-send-approval-and-notification-chats.md)) |
+| `armed.go` | **guard file:** armed sends: pattern slots, the arming prompt, in-memory patterns and their use ([ADR 032c66](../../../docs/architecture/decisions/2026-10-30-032c66-armed-sends-approve-a-pattern-ahead.md)) |
+| `armed_test.go` | tests for `armed.go` |
 | `approve_test.go` | tests for `approve.go` and the `notify` commands |
 | `selfcmd_test.go` | tests for `selfcmd.go` |
 | `history.go` | history on add: chat anchors, the on-demand request to the phone, what an on-demand answer may change |
@@ -17,7 +19,7 @@ Decisions: [fork](../../../docs/architecture/decisions/2026-10-23-de419c-fork-an
 | `config_test.go` | tests for every function in `config.go` |
 | `fixture_test.go` | writes a fixture `messages.db` through the real `MessageStore` when `FIXTURE_HOME` is set (used by the server tests) |
 
-**API.** `POST /api/send` (Touch ID first unless to you or a notification chat), `POST /api/download`, `POST /api/command` (posts `#wa <command>` to your notification chat, or the self-chat if you have none, and applies it here; `notify` asks for Touch ID) and `POST /api/approve-test` (one prompt, nothing sent) on `127.0.0.1:<port>` (default 8080), header
+**API.** `POST /api/send` (Touch ID first unless to you or a notification chat), `POST /api/download`, `POST /api/command` (posts `#wa <command>` to your notification chat, or the self-chat if you have none, and applies it here; `notify` asks for Touch ID) `POST /api/approve-test` (one prompt, nothing sent), and `POST /api/arm` / `/api/armed` / `/api/disarm` (approve a message pattern for a chat ahead of time with Touch ID, list, drop; [ADR 032c66](../../../docs/architecture/decisions/2026-10-30-032c66-armed-sends-approve-a-pattern-ahead.md)) on `127.0.0.1:<port>` (default 8080), header
 `Authorization: Bearer <~/.whatsapp-mcp/token>`, `Content-Type: application/json`. A send to a chat not on the
 allowlist asks for Touch ID and, once sent, adds the chat here; media outside the `send_from` folders (or in a
 hidden folder) is refused.

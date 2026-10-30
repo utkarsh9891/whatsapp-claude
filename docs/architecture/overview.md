@@ -33,7 +33,8 @@ flowchart LR
    stays small.
 3. **Sending.** `send_message` / `send_file` (or `wa-send`) call the bridge's local API. The bridge refuses any
    recipient not on the allowlist and any file outside the `send_from` folders, and asks for your Touch ID
-   before sending to anyone but you or a notification chat (the `WhatsApp for Claude` helper).
+   before sending to anyone but you or a notification chat (the `WhatsApp for Claude` helper), unless the text
+   fits a pattern you armed for that chat with Touch ID beforehand.
 4. **Offline.** A sleeping machine's bridge reconnects on wake and WhatsApp delivers what it queued for that
    device. Each machine is a separate linked device with its own store ([runbook](../operations/runbook.md#several-machines)).
 
