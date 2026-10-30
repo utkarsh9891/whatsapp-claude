@@ -6,13 +6,25 @@
 
   wa-send <chat> <text…>                  send text ("-" reads it from stdin)
   wa-send <chat> --file <path> [text…]    send a file, with optional caption text
+  wa-send --arm <chat> [--for 2h] [--times N] <pattern…>
+                                          approve, with Touch ID now, text sends to <chat> that fit
+                                          the pattern, so they go out later without asking
+  wa-send --armed                         list armed patterns
+  wa-send --disarm [<chat>|<id>]          drop armed patterns (all with no argument)
 
 <chat> is a JID, "me" (your own chat), or a chat's exact name (any case). The bridge decides:
-your own chat and notification chats send straight away; anyone else waits for your Touch ID.
-A chat not on the allowlist is added once you approve a send to it. ADRs 2026-10-27-17d63a, 16abb6.
+your own chat and notification chats send straight away; anyone else waits for your Touch ID,
+unless the text fits a pattern you armed for that chat. A chat not on the allowlist is added once
+you approve a send to it. ADRs 2026-10-27-17d63a, 16abb6, 2026-10-30-032c66.
+
+A pattern is fixed text with slots: {num} digits with . or , | {id} a ticket, PR, branch, SHA or
+version (no spaces) | {url} one https:// link | {text} any one line up to 100 characters.
+{{ and }} are literal braces. The whole message must fit. --for takes 90m, 2h, 1h30m (default 2h,
+at most 24h); --times defaults to 1 (at most 20). Files always ask. A bridge restart drops them.
 """
 import json
 import os
+import re
 import sqlite3
 import sys
 import urllib.error
@@ -47,8 +59,90 @@ def resolve(chat):
     sys.exit(f"Several chats are named {chat!r}; pass the JID:\n" + "\n".join(f"  {j}" for j, _ in rows))
 
 
+def call(path, payload):
+    """POST payload to the bridge; the JSON reply (Touch ID can take up to two minutes)."""
+    try:
+        with open(os.path.join(HOME, "config.json")) as f:
+            port = json.load(f).get("port") or 8080
+        with open(os.path.join(HOME, "token")) as f:
+            token = f.read().strip()
+    except (OSError, ValueError):
+        sys.exit("No bridge config or token: is the bridge set up? (install.sh status)")
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{port}{path}",
+        data=json.dumps(payload).encode(),
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        raw = e.read() or b"{}"
+        try:
+            return json.loads(raw)
+        except ValueError:
+            return {"message": raw.decode(errors="replace").strip() or e.reason}
+    except urllib.error.URLError as e:
+        sys.exit(f"bridge not reachable ({e.reason}); start it with install.sh service")
+
+
+def finish(body, prefix=""):
+    print(f"{prefix}{body.get('message', body)}")
+    sys.exit(0 if body.get("success") else 1)
+
+
+def arm(args):
+    opts = {"for": "", "times": 0}
+    if not args:
+        sys.exit(__doc__.strip())
+    chat, rest = args[0], args[1:]
+    while rest and rest[0] in ("--for", "--times"):
+        if len(rest) < 2:
+            sys.exit(__doc__.strip())
+        flag, value, rest = rest[0][2:], rest[1], rest[2:]
+        if flag == "times":
+            if not value.isdigit():
+                sys.exit("--times takes a number")
+            value = int(value)
+        opts[flag] = value
+    pattern = sys.stdin.read().strip() if rest == ["-"] else " ".join(rest)
+    if not pattern:
+        sys.exit("Nothing to arm: give a pattern")
+    jid = resolve(chat)
+    print("Touch ID: approve the pattern on screen", file=sys.stderr)
+    finish(call("/api/arm", {"recipient": jid, "pattern": pattern, **opts}), f"{jid}: ")
+
+
+def armed():
+    body = call("/api/armed", {})
+    for a in body.get("armed") or []:
+        until = a["until"][11:16]
+        print(f"{a['id']}  {a['name'] or a['chat']}  \"{a['pattern']}\"  {a['left']} left, until {until}")
+    finish(body)
+
+
+def disarm(args):
+    target = " ".join(args)
+    if not target:
+        payload = {}
+    elif re.fullmatch(r"[0-9a-f]{6}", target):
+        payload = {"id": target}
+    else:
+        payload = {"recipient": resolve(target)}
+    finish(call("/api/disarm", payload))
+
+
 def main(argv):
-    if len(argv) < 2 or argv[0] in ("-h", "--help"):
+    if not argv or argv[0] in ("-h", "--help"):
+        sys.exit(__doc__.strip())
+    if argv[0] == "--arm":
+        return arm(argv[1:])
+    if argv[0] == "--armed":
+        return armed()
+    if argv[0] == "--disarm":
+        return disarm(argv[1:])
+    if len(argv) < 2:
         sys.exit(__doc__.strip())
     chat, rest = argv[0], argv[1:]
     media = ""
@@ -59,29 +153,8 @@ def main(argv):
     text = sys.stdin.read().strip() if rest == ["-"] else " ".join(rest)
     if not text and not media:
         sys.exit("Nothing to send")
-    try:
-        with open(os.path.join(HOME, "config.json")) as f:
-            port = json.load(f).get("port") or 8080
-        with open(os.path.join(HOME, "token")) as f:
-            token = f.read().strip()
-    except (OSError, ValueError):
-        sys.exit("No bridge config or token: is the bridge set up? (install.sh status)")
     jid = resolve(chat)
-    req = urllib.request.Request(
-        f"http://127.0.0.1:{port}/api/send",
-        data=json.dumps({"recipient": jid, "message": text, "media_path": media}).encode(),
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=180) as r:
-            body = json.load(r)
-    except urllib.error.HTTPError as e:
-        body = json.loads(e.read() or b"{}")
-    except urllib.error.URLError as e:
-        sys.exit(f"bridge not reachable ({e.reason}); start it with install.sh service")
-    print(f"{jid}: {body.get('message', body)}")
-    sys.exit(0 if body.get("success") else 1)
+    finish(call("/api/send", {"recipient": jid, "message": text, "media_path": media}), f"{jid}: ")
 
 
 if __name__ == "__main__":

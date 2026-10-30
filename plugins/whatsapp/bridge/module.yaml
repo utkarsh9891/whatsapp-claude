@@ -8,7 +8,8 @@ purpose: >
   Sends to anyone but the owner wait for the owner's Touch ID (the WhatsApp for Claude helper), except notification chats that can
   only reach the owner.
   Decisions: ADR 2026-10-23-de419c, ADR 2026-10-23-e302a3, ADR 2026-10-23-f28675, ADR 2026-10-27-a8ea3b,
-  ADR 2026-10-27-17d63a, ADR 2026-10-27-16abb6.
+  A pattern the owner arms with Touch ID ahead of time lets matching text sends to that chat go out unattended.
+  ADR 2026-10-27-17d63a, ADR 2026-10-27-16abb6, ADR 2026-10-30-032c66.
 consumes:
   - go.mau.fi/whatsmeow           # WhatsApp multi-device protocol
   - github.com/mattn/go-sqlite3   # message store (cgo)
@@ -22,6 +23,9 @@ interfaces:
   - "POST 127.0.0.1:<port>/api/download  {message_id, chat_jid}             Bearer token, application/json"
   - "POST 127.0.0.1:<port>/api/command   {command}                        Bearer token, application/json; posts #wa <command> to the first notification chat (else the self-chat)"
   - "POST 127.0.0.1:<port>/api/approve-test {}                             Bearer token, application/json; one Touch ID prompt, nothing sent"
+  - "POST 127.0.0.1:<port>/api/arm      {recipient, pattern, for?, times?} Bearer token, application/json; Touch ID, then text sends matching the pattern skip the prompt"
+  - "POST 127.0.0.1:<port>/api/armed    {}                               Bearer token, application/json; lists armed patterns"
+  - "POST 127.0.0.1:<port>/api/disarm   {recipient?, id?}                 Bearer token, application/json; drops armed patterns (all with neither)"
   - "runs ./WhatsApp for Claude (next to the bridge binary) for owner approval"
   - "reads #wa commands sent by the owner in their own chat; applies them to config.json"
   - "writes messages.db (chats, chat_anchors, messages) read by server"
@@ -30,6 +34,7 @@ guard_files:
   - ./config.go
   - ./selfcmd.go
   - ./approve.go
+  - ./armed.go
 docs:
   readme: ./README.md
   design: ../../../docs/architecture/decisions/2026-10-23-e302a3-allowlist-gates-content-and-sends.md

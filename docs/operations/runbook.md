@@ -106,5 +106,6 @@ delete `~/.whatsapp-mcp` and remove the device under **Linked devices** on the p
 | bridge won't build after an update | `go version` vs `go.mod` | `brew upgrade go` |
 | build fails `unknown architecture arm64e.x1` | a newer SDK than the linker (`ls /Library/Developer/CommandLineTools/SDKs`) | `SDKROOT=…/MacOSX<your macOS>.sdk install.sh`, or reinstall the Command Line Tools |
 | send fails "not approved" | the Touch ID prompt was declined or timed out (2 min) | send again and touch the sensor |
+| an armed send asks for Touch ID | the text didn't match the pattern (the error says so), it ran out or expired, or the bridge restarted | `wa-send --armed`; re-arm |
 | send fails "Touch ID isn't available" | lid closed, or locked out after failed attempts | open the lid, or unlock the Mac with your password once |
 | notification chat asks for Touch ID | `tail ~/.whatsapp-mcp/bridge.log`: more than two members, or you're not in it | remove the extra member |

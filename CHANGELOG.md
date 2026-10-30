@@ -2,6 +2,15 @@
 
 Notable changes per plugin version (`plugins/whatsapp/.claude-plugin/plugin.json`). Back to [AGENTS.md](./AGENTS.md).
 
+## 0.9.0 — 2026-10-30
+
+- **Armed sends:** `wa-send --arm <chat> [--for 2h] [--times N] "<pattern>"` asks for your Touch ID now, showing
+  the whole pattern; later text sends to that chat that fit it (slots `{num}`, `{id}`, `{url}`, `{text}`) go out
+  without a prompt, so a message for when a step finishes isn't lost while you're away
+  ([ADR 032c66](./docs/architecture/decisions/2026-10-30-032c66-armed-sends-approve-a-pattern-ahead.md)). Held in
+  the bridge's memory only; `wa-send --armed` lists them, `--disarm` drops them.
+- `wa-send` shows the bridge's message instead of crashing when a refusal isn't JSON.
+
 ## 0.8.0 — 2026-10-28
 
 - **Send to any chat:** a send you approve with Touch ID no longer needs the chat on the allowlist first; once
